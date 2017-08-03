@@ -1,0 +1,611 @@
+#!/bin/bash
+
+####################################
+# Copyright (c) 2016 - 2017 YMC AG #
+###########################################################################
+# This program is free software; you can redistribute it and/or modify it #
+# under the terms of the GNU General Public License as published by the   #
+# Free Software Foundation; either version 2 of the License, or (at your  #
+# option) any later version.                                              #
+# A copy of the GNU General Public License version 2 is in file GPL-2.    #
+###########################################################################
+
+set -e
+
+export MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION="0.2017.08.02-1"
+MODOFU_SCRIPT_NAME="$(basename "$0" || echo "$0")"
+
+if [ -z "$MODOFU_DOCKER_IMAGE" ]; then
+  echo "E: Environment variable '\$MODOFU_DOCKER_IMAGE' not defined" 1>&2
+  exit 1
+fi
+
+GENERIC_LOCAL_TEST_IP="127.254.253.251"
+LOCAL_DOCKER_HOST_IP="203.0.113.177"
+
+OS="$(uname)"
+case "$OS" in
+  Darwin)
+    OS="osx"
+    NC="nc -G 1"
+    SED="sed -E"
+  ;;
+
+  Linux)
+    OS="linux"
+    NC="nc"
+    SED="sed -r"
+  ;;
+
+  *)
+    echo "E: Unsupported operating '$OS' system" 1>&2
+    exit 1
+  ;;
+esac
+
+
+if ! [ -x "$(which docker)" ]; then
+  echo "E: docker not found. Please install it manually!" 1>&2
+  exit 1
+fi
+
+if ! [ -x "$(which docker-compose)" ]; then
+  echo "E: docker-compose not found. Please install it manually!" 1>&2
+  exit 1
+fi
+
+if ! [ -x "$(which nc)" ]; then
+  echo "E: Command 'nc' (netcat) not found. Please install netcat manually!" 1>&2
+  exit 1
+fi
+
+provide_basic_informations()
+{
+  if [ ! -f .env ]; then
+    echo "E: No '.env' file found in the current directory." 1>&2
+    echo "   Are you in the project's root directory?" 1>&2
+    exit 1
+  fi
+
+  if [ ! -r .env ]; then
+    echo "E: The '.env' file is not readable." 1>&2
+    exit 1
+  fi
+
+  source .env
+  if [ -z "$COMPOSE_PROJECT_NAME" ]; then
+    echo "E: You need to define variable 'COMPOSE_PROJECT_NAME' in the projects '.env' file, containing the" 1>&2
+    echo "   name of the project." 1>&2
+    exit 1
+  else
+    local COMPOSE_PROJECT_NAME_UNWASHED="$COMPOSE_PROJECT_NAME"
+    # "Normalize" the name, just like docker-compose does it - see:
+    #  https://github.com/docker/compose/blob/1.14.0/compose/cli/command.py#L108
+    export COMPOSE_PROJECT_NAME=$(echo "$COMPOSE_PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | $SED 's/[^a-z0-9]//g')
+
+    if [ "$COMPOSE_PROJECT_NAME_UNWASHED" != "$COMPOSE_PROJECT_NAME" ]; then
+      echo "E: The project name, defined in file .env using variable 'COMPOSE_PROJECT_NAME' is not valid." 1>&2
+      echo "   Please make sure it is all lowercase and uses only a-z and 0-9." 1>&2
+      echo "   This is a limitation of docker-compose, for details refer to e.g.:" 1>&2
+      echo "   https://github.com/docker/compose/issues/2119" 1>&2
+      echo "   https://github.com/docker/compose/issues/4002" 1>&2
+      echo "I: Currently defined in .env: 'COMPOSE_PROJECT_NAME=\"${COMPOSE_PROJECT_NAME_UNWASHED}\"" 1>&2
+      echo "   It should be changed to:   'COMPOSE_PROJECT_NAME=\"${COMPOSE_PROJECT_NAME}\"" 1>&2
+      exit 1
+    fi
+  fi
+
+  if [ -n "$PROJECT_DEV_DOMAINS" ]; then
+    # Wash quotes out of PROJECT_DEV_DOMAINS #SEE e.g.: https://github.com/docker/compose/issues/3702
+    export PROJECT_DEV_DOMAINS="$PROJECT_DEV_DOMAINS"
+  fi
+
+  if [ -n "$PROJECT_DEV_IP" ]; then
+    # Wash quotes out of PROJECT_DEV_IP #SEE e.g.: https://github.com/docker/compose/issues/3702
+    export PROJECT_DEV_IP="$PROJECT_DEV_IP"
+  else
+    # Get the local IP we will run on
+    if [ "$OS" = "osx" ]; then
+      docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-get-local-ip-for-project-name)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-get-local-ip-for-project-name.script
+      chmod 755 /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-get-local-ip-for-project-name.script
+      export PROJECT_DEV_IP=$(/tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-get-local-ip-for-project-name.script "$COMPOSE_PROJECT_NAME")
+    elif [ "$OS" = "linux" ]; then
+      export PROJECT_DEV_IP=$(docker run --rm -v /etc/hosts:/etc_host_file.from_docker_host:ro $MODOFU_DOCKER_IMAGE modofu-get-local-ip-for-project-name "$COMPOSE_PROJECT_NAME")
+    else
+      echo "E: Can not get local IP to run on, since OS '$OS' is not supported" 1>&2
+      return 1
+    fi
+  fi
+
+  if [ -n "$COMPOSE_PATH_SEPARATOR" ]; then
+    # Wash quotes out of COMPOSE_PATH_SEPARATOR #SEE e.g.: https://github.com/docker/compose/issues/3702
+    export COMPOSE_PATH_SEPARATOR="$COMPOSE_PATH_SEPARATOR"
+  else
+    export COMPOSE_PATH_SEPARATOR=':'
+  fi
+
+  if [ -n "$COMPOSE_FILE" ]; then
+    # Wash quotes out of COMPOSE_FILE #SEE e.g.: https://github.com/docker/compose/issues/3702
+    export COMPOSE_FILE="$COMPOSE_FILE"
+  else
+    export COMPOSE_FILE="docker-compose.yml${COMPOSE_PATH_SEPARATOR}docker-compose-dev.yml"
+  fi
+
+  export COMPOSE_FILE="${COMPOSE_FILE}${COMPOSE_PATH_SEPARATOR}docker-compose-dev-${OS}.yml"
+}
+
+int_add_entries_to_etc_hosts()
+{
+  local MATCH_NAME="$1"
+  local IP_TO_ADD="$2"
+  local EXTRA_DOMAINS_TO_ADD="$3"
+  if [ "$OS" = "osx" ]; then
+    docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-modify-etc-hosts)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-modify-etc-hosts.script
+    chmod 755 /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-modify-etc-hosts.script
+    sudo /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-modify-etc-hosts.script $MATCH_NAME $IP_TO_ADD "$EXTRA_DOMAINS_TO_ADD"
+  elif [ "$OS" = "linux" ]; then
+    docker run --rm -v /etc/hosts:/etc_host_file.from_docker_host $MODOFU_DOCKER_IMAGE modofu-modify-etc-hosts $MATCH_NAME $IP_TO_ADD "$EXTRA_DOMAINS_TO_ADD"
+  else
+    echo "E: Can not modify /etc/hosts, since OS '$OS' is not supported" 1>&2
+    return 1
+  fi
+}
+
+
+provide_domain_informations()
+{
+  local_domain_names=$(grep "^$PROJECT_DEV_IP.*${COMPOSE_PROJECT_NAME}\$" /etc/hosts | $SED 's/[[:space:]]+/ /g' | $SED 's/#.*$//' | cut -d ' ' -f 2-)
+  export MODOFU_PRIMARY_LOCAL_DOMAIN=$(echo $local_domain_names | cut -d ' ' -f 1)
+}
+
+provide_ports_informations()
+{
+  ports_used_by_project=$(PROJECT_DEV_IP=TMP-GET-PORTS docker-compose config \
+                                                         | grep TMP-GET-PORTS \
+                                                         | cut -d ':' -f 2 \
+                                                         | sort -n -u)
+}
+
+deal_with_3rd_party_tools()
+{
+  local mode="$1"
+  if [ "$mode" != "auto_install" ]; then
+    mode="exit_with_error_if_missing"
+  fi
+
+  echo "I: Checking if all required 3rd-party tools are present on the local system..." 1>&2
+
+  if [ "$OS" = "osx" ]; then
+    if ! [ -x "$(which brew)" ]; then
+      echo "W: Command brew (homebrew) not found." 1>&2
+      if [ "$mode" = "auto_install" ]; then
+        echo "I: Auto installing of brew is not supported. Please visit https://brew.sh/ for install instructions." 1>&2
+        exit 1
+      else
+        echo "E: Please install it manually. Install instruction can be found at: https://brew.sh/" 1>&2
+        exit 1
+      fi
+    fi
+
+    if ! [ -x "$(which unison)" ]; then
+      echo "W: Command unison not found" 1>&2
+      if [ "$mode" = "auto_install" ]; then
+        echo "I: Trying to install it. You might need to provide your password..." 1>&2
+        brew install unison
+        echo "I: Installed." 1>&2
+      else
+        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
+        exit 1
+      fi
+    fi
+
+    if ! [ -x "$(which unison-fsmonitor)" ]; then
+      echo "W: Command unison-fsmonitor not found" 1>&2
+      if [ "$mode" = "auto_install" ]; then
+        echo "I: Trying to install it. You might need to provide your password..." 1>&2
+        brew tap eugenmayer/dockersync && brew install eugenmayer/dockersync/unox
+        echo "I: Installed." 1>&2
+      else
+        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
+        exit 1
+      fi
+    fi
+
+    if ! [ -x "$(which docker-sync)" ]; then
+      echo "W: Command docker-sync not found." 1>&2
+      if [ "$mode" = "auto_install" ]; then
+        echo "I: Auto installing of docker-sync is not supported. Please visit http://docker-sync.io/ for install instructions." 1>&2
+        exit 1
+      else
+        echo "E: Please install it manually. Install instruction can be found at: http://docker-sync.io/" 1>&2
+        exit 1
+      fi
+    fi
+
+    if ! [ -x "$(which socat)" ]; then
+      echo "W: Command socat not found" 1>&2
+      if [ "$mode" = "auto_install" ]; then
+        echo "I: Trying to install it. You might need to provide your password..." 1>&2
+        brew install socat
+        echo "I: Installed." 1>&2
+      else
+        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
+        exit 1
+      fi
+    fi
+
+    if ! [ -x "$(which screen)" ]; then
+      echo "W: Command screen not found" 1>&2
+      if [ "$mode" = "auto_install" ]; then
+        echo "I: Trying to install it. You might need to provide your password..." 1>&2
+        brew install homebrew/dupes/screen
+        echo "I: Installed." 1>&2
+      else
+        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
+        exit 1
+      fi
+    fi
+
+    if ! [ -x "$(which pstree)" ]; then
+      echo "W: Command pstree not found" 1>&2
+      if [ "$mode" = "auto_install" ]; then
+        echo "I: Trying to install it. You might need to provide your password..." 1>&2
+        brew install pstree
+        echo "I: Installed." 1>&2
+      else
+        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
+        exit 1
+      fi
+    fi
+  fi
+
+  echo "I: Done with checking if all required 3rd-party tools are present on the local system." 1>&2
+}
+
+start_devel_env()
+{
+  echo "I: Starting development environment..." 1>&2
+  if [ "$OS" = "osx" ]; then
+    # Bring up the GENERIC_LOCAL_TEST_IP
+    echo "I: Adding a generic local test ip on the loopback device. You might need to provide your password..." 1>&2
+    sudo ifconfig lo0 alias $GENERIC_LOCAL_TEST_IP 255.0.0.0
+
+    # Bring up a static ip where we can be sure to always reach the local docker host
+    echo "I: Adding a local ip on the loopback device, where the docker host can be reach from the docker containers..." 1>&2
+    sudo ifconfig lo0 alias $LOCAL_DOCKER_HOST_IP 255.0.0.0
+  elif [ "$OS" = "linux" ]; then
+    # Bring up a static ip where we can be sure to always reach the local docker host
+    if [ $(docker network inspect modofu-local-docker-host | grep -c -F "$LOCAL_DOCKER_HOST_IP") -le 0 ]; then
+      # Ensure the docker network 'modofu-local-docker-host' does not exists
+      docker network rm modofu-local-docker-host 2>/dev/null 1>/dev/null || true
+      echo "I: Adding a local ip where the docker host can be reached from the docker containers..." 1>&2
+      docker network create --driver bridge --ip-range 203.0.113.176/30 --subnet 203.0.113.176/30 --gateway $LOCAL_DOCKER_HOST_IP --internal modofu-local-docker-host
+    fi
+  fi
+
+  # Add a name to reach the local docker host
+  int_add_entries_to_etc_hosts "MODOFU-LOCAL-DOCKER-HOST" $LOCAL_DOCKER_HOST_IP "docker-host.local.modofu.test"
+
+  provide_basic_informations
+  deal_with_3rd_party_tools exit_with_error_if_missing
+
+  if [ "$OS" = "osx" ]; then
+
+    # Check if solely unison is used
+    if [ $(docker-sync list --verbose | grep strategy | $SED 's/[^[:space:]]+[[:space:]]+(.*)/\1/' | grep -c -v -E -e '^unison$') -gt 0 ]; then
+      echo "E: Currently only 'unison' is supported for docker-sync. Please ensure you use" 1>&2
+      echo "   sync_strategy: 'unison'" 1>&2
+      echo "   In your docker-sync.yml configuration file." 1>&2
+      exit 1
+    fi
+
+    echo "UNKNOWN" > /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status
+
+    # Store the docker-sync-watchdog on the local system for later execution
+    docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat /usr/local/share/modofu/modofu-docker-sync-watchdog-real' > /tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script
+    chmod 755 /tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script
+
+    # Open a new screen for docker-sync-watchdog (if needed)
+    if [ $(screen -ls docker-sync-watchdog.$COMPOSE_PROJECT_NAME | grep -c "\.docker-sync-watchdog.$COMPOSE_PROJECT_NAME[[:space:]]") -le 0 ]; then
+      echo "I: Opening a new screen docker-sync-watchdog.$COMPOSE_PROJECT_NAME" 1>&2
+      screen -s /bin/bash -dmS docker-sync-watchdog.$COMPOSE_PROJECT_NAME && sleep 1
+    fi
+
+    # Terminate a potentially running docker-sync-watchdog in that screen
+    screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n"
+
+    # Wait a bit
+    sleep 1
+
+    # Start the docker-sync-watchdog
+    screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"/tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script $COMPOSE_PROJECT_NAME\n"
+
+    # Wait again a bit
+    sleep 1
+
+    echo "Waiting for docker-sync to get ready..." 1>&2
+    loop_protection=120
+    while [ $loop_protection -gt 0 ]
+    do
+      let loop_protection--
+      if [ ! -r "/tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status" ]; then
+        echo "E: File '/tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status' not present." 1>&2
+        echo "   The docker-sync-watchdog is most likely broken, please contact the modofu developers!" 1>&2
+        exit 1
+      fi
+
+      if [ $(cat /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status | grep -c "SYNCED") -eq 1 ]; then
+        break
+      elif [ $(cat /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status | grep -c "ASKPASS") -eq 1 ]; then
+        echo "" 1>&2
+        read -s -p "Docker-Sync asks for your password, please provide it:" pw_for_docker_sync
+        screen -S docker-sync.$COMPOSE_PROJECT_NAME -X stuff $"$pw_for_docker_sync\n"
+        pw_for_docker_sync="iudfhgw98w54zhgoipaerzfw45hgera6f54gug86fsdfg"
+        unset pw_for_docker_sync
+        sleep 1
+        echo "" 1>&2
+      else
+        sleep 1
+      fi
+
+      echo -e -n "Waiting (${loop_protection}s)...                         \r" 1>&2
+    done
+    if [ $loop_protection -le 0 ]; then
+      echo "...FAILED                                                        " 1>&2
+      echo "E: Starting docker-sync took too long (or just failed)." 1>&2
+      echo "I: If you are familiar with screen, you might want to debug this:" 1>&2
+      echo "   - Check the output of docker-sync by entering the screen it is running in with:" 1>&2
+      echo "     # screen -r docker-sync.$COMPOSE_PROJECT_NAME" 1>&2
+      echo "   - Check the status of the docker-sync-watchdog by entering the screen it is running in with:" 1>&2
+      echo "     # screen -r docker-sync-watchdog.$COMPOSE_PROJECT_NAME" 1>&2
+      exit 1
+    else
+      echo "...OKAY                                                          " 1>&2
+    fi
+
+    echo "I: Adding local project IP on the loopback device. You might need to provide your password..." 1>&2
+    sudo ifconfig lo0 alias $PROJECT_DEV_IP 255.0.0.0
+  fi
+
+  int_add_entries_to_etc_hosts $COMPOSE_PROJECT_NAME $PROJECT_DEV_IP "$PROJECT_DEV_DOMAINS"
+
+  provide_domain_informations
+
+  provide_ports_informations
+
+  echo "I: Checking if something blocking ports needed by the project on the local." 1>&2
+  for port in $ports_used_by_project
+  do
+    is_blocking=0
+    echo "I: Checking port $port..." 1>&2
+    $NC -z $GENERIC_LOCAL_TEST_IP $port && is_blocking=1 || is_blocking=0
+    if [ $is_blocking -eq 1 ]; then
+      echo "E: Something is already using port $port on your local system." 1>&2
+      echo "   Reconfigure the service blocking this ports to use 127.0.0.1 instead"  1>&2
+      echo "   of listening on all IPs or simply stop the service." 1>&2
+      echo "I: To find out what process is listening on port $port use:" 1>&2
+      echo "   # sudo lsof -i :$port" 1>&2
+      exit 1
+    fi
+  done
+
+  docker-compose up -d
+
+  echo "I: App is now starting, this could take a moment. Use command" 1>&2
+  echo "     # export COMPOSE_PATH_SEPARATOR='$COMPOSE_PATH_SEPARATOR'" 1>&2
+  echo "     # export COMPOSE_FILE='$COMPOSE_FILE'" 1>&2
+  echo "     # docker-compose logs -f" 1>&2
+  echo "   to view the progress." 1>&2
+
+  # Process each each container
+  for container_id in $(docker-compose ps -q)
+  do
+    if [ $(docker exec -u root $container_id cat /etc/hosts | grep -c -F "$LOCAL_DOCKER_HOST_IP docker-host.local.modofu.test") -le 0 ]; then
+      docker exec -u root $container_id sh -c "echo '$LOCAL_DOCKER_HOST_IP docker-host.local.modofu.test' >> /etc/hosts" || true
+    fi
+  done
+}
+
+devel_env_info()
+{
+  provide_basic_informations
+  provide_domain_informations
+  provide_ports_informations
+  echo "__________________________________________________________________________" 1>&2
+  echo "" 1>&2
+  echo "I: Your project uses the IP '$PROJECT_DEV_IP'" 1>&2
+  if [ -z "$local_domain_names" ]; then
+    echo "   Currently no names are pointing to the above mentioned IP." 1>&2
+  else
+    echo "   The following names are currently pointing to the above mentioned IP:" 1>&2
+    for local_domain_name in $local_domain_names; do
+      echo "   - $local_domain_name" 1>&2
+    done
+  fi
+
+  echo "I: The following ports are in use by your project:" 1>&2
+  for port in $ports_used_by_project; do
+    docker_container_in_use="$(docker-compose ps | grep -F "$PROJECT_DEV_IP:$port->" | cut -d ' ' -f 1)"
+    if [ -z "$docker_container_in_use" ]; then
+      docker_container_in_use="Container not running right now"
+    fi
+    echo -e "   - $port \t($docker_container_in_use)" 1>&2
+  done
+
+  echo "I: For futher details use '# docker-compose ps'" 1>&2
+
+  echo "" 1>&2
+  echo "I: Use '# $MODOFU_SCRIPT_NAME dev stop' to stop the app" 1>&2
+  echo "I: Use '# $MODOFU_SCRIPT_NAME dev info' to see this this summary again" 1>&2
+
+  if [ "$OS" = "osx" ]; then
+    echo "" 1>&2
+    echo "I: If you are interested in the output of docker-sync, enter it's screen with:" 1>&2
+    echo "   # screen -r docker-sync.$COMPOSE_PROJECT_NAME" 1>&2
+  fi
+
+}
+
+build_devel_env()
+{
+  echo "I: (Re-)Building development environment..." 1>&2
+  provide_basic_informations
+
+  docker-compose build --pull
+}
+
+stop_devel_env()
+{
+  echo "I: Stopping development environment..." 1>&2
+  provide_basic_informations
+  provide_domain_informations
+
+  # Terminate docker-sync-watchdog (if needed)
+  screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n" 1>/dev/null 2>/dev/null && sleep 5 || true
+  screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X quit 1>/dev/null 2>/dev/null || true
+
+  docker-compose stop
+}
+
+clean_devel_sync()
+{
+  if [ "$OS" = "linux" ]; then
+    echo "I: A sync workaround is not needed under linux, thus there is nothing to clean." 1>&2
+  elif [ "$OS" = "osx" ]; then
+    stop_devel_env
+    if [ "$1" = "remove" ]; then
+      remove_devel_env
+    fi
+    echo "I: Cleaning docker-sync..." 1>&2
+    docker-sync clean
+  else
+    echo "E: Unsupported operating system." 1>&2
+    exit 1
+  fi
+}
+
+remove_devel_env()
+{
+  echo "I: Removing development environment..." 1>&2
+  provide_basic_informations
+  provide_domain_informations
+  docker-compose down
+  int_add_entries_to_etc_hosts $COMPOSE_PROJECT_NAME do_clean
+  if [ "$OS" = "osx" ]; then
+    # Remove IP alias for the project
+    echo "I: Removing local project IP on the loopback device. You might need to provide your password..." 1>&2
+    sudo ifconfig lo0 -alias $PROJECT_DEV_IP 255.0.0.0
+  fi
+}
+
+self_upgrade()
+{
+  echo "I: Upgrading modofu..." 1>&2
+  docker pull $MODOFU_DOCKER_IMAGE
+}
+
+case "$1" in
+  dev)
+    case "$2" in
+      info)
+        devel_env_info
+      ;;
+
+      build)
+        build_devel_env
+      ;;
+
+      start)
+        start_devel_env
+        devel_env_info
+      ;;
+
+      stop)
+        stop_devel_env
+      ;;
+
+      clean-sync)
+        clean_devel_sync remove
+      ;;
+
+      remove)
+        stop_devel_env
+        remove_devel_env
+        clean_devel_sync no-remove
+      ;;
+
+      ''|help)
+        echo "Command '$1' supports the following arguments:" 1>&2
+        echo "    help" 1>&2
+        echo "    info" 1>&2
+        echo "    build" 1>&2
+        echo "    start" 1>&2
+        echo "    stop" 1>&2
+        echo "    clean-sync" 1>&2
+        echo "    remove" 1>&2
+      ;;
+
+      *)
+        echo "E: Command '$1' does not support argument '$2'" 1>&2
+        exit 1
+      ;;
+    esac
+  ;;
+
+  self-upgrade)
+    self_upgrade
+  ;;
+
+  auto-install-3rd-party-tools)
+    deal_with_3rd_party_tools auto_install
+  ;;
+
+  license)
+    docker run --rm $MODOFU_DOCKER_IMAGE cat /usr/local/share/modofu/GPL-2
+    echo "
+####################################
+# Copyright (c) 2016 - 2017 YMC AG #
+###########################################################################
+# This program is free software; you can redistribute it and/or modify it #
+# under the terms of the GNU General Public License as published by the   #
+# Free Software Foundation; either version 2 of the License, or (at your  #
+# option) any later version.                                              #
+# The text of the GNU General Public License version 2 is found above.    #
+###########################################################################
+    "
+  ;;
+
+  internal-uninstall-helper)
+    int_add_entries_to_etc_hosts full_clean
+
+    echo "I: Ensuring docker network 'modofu-local-docker-host' does not exists..." 1>&2
+    docker network rm modofu-local-docker-host 2>/dev/null 1>/dev/null || true
+
+    if [ "$OS" = "osx" ]; then
+      echo "I: Removing the generic local test ip on the loopback device. You might need to provide your password..." 1>&2
+      sudo ifconfig lo0 alias $GENERIC_LOCAL_TEST_IP 255.0.0.0
+
+      echo "I: Removing the local ip on the loopback device, where the docker host was reachable from the docker containers..." 1>&2
+      sudo ifconfig lo0 alias $LOCAL_DOCKER_HOST_IP 255.0.0.0
+    fi
+  ;;
+
+  ''|help)
+    echo "USAGE: $MODOFU_SCRIPT_NAME COMMAND [argument...]" 1>&2
+    echo "Commands:" 1>&2
+    echo "    help" 1>&2
+    echo "    dev" 1>&2
+    echo "    self-upgrade" 1>&2
+    echo "    auto-install-3rd-party-tools" 1>&2
+    echo "    license" 1>&2
+  ;;
+
+  *)
+    echo "E: $MODOFU_SCRIPT_NAME does not support command '$1'" 1>&2
+    echo "I: For a list of valid commands use:" 1>&2
+    echo "   # $MODOFU_SCRIPT_NAME help" 1>&2
+    exit 1
+  ;;
+esac
+
+exit 0

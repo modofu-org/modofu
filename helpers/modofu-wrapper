@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+####################################
+# Copyright (c) 2016 - 2017 YMC AG #
+###########################################################################
+# This program is free software; you can redistribute it and/or modify it #
+# under the terms of the GNU General Public License as published by the   #
+# Free Software Foundation; either version 2 of the License, or (at your  #
+# option) any later version.                                              #
+# A copy of the GNU General Public License version 2 is in file GPL-2.    #
+###########################################################################
+
+export MODOFU_LOCAL_DOCKER_SETUP_WRAPPER_VERSION="0.2017.08.02-1"
+if [ -z "$MODOFU_DOCKER_IMAGE" ]; then
+  export MODOFU_DOCKER_IMAGE="ymcag/modofu:stable"
+fi
+
+docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat /usr/local/share/modofu/modofu-real' > /tmp/modofu-real.$MODOFU_LOCAL_DOCKER_SETUP_WRAPPER_VERSION.script
+. /tmp/modofu-real.$MODOFU_LOCAL_DOCKER_SETUP_WRAPPER_VERSION.script
+

@@ -1,0 +1,100 @@
+#!/bin/bash
+
+####################################
+# Copyright (c) 2016 - 2017 YMC AG #
+###########################################################################
+# This program is free software; you can redistribute it and/or modify it #
+# under the terms of the GNU General Public License as published by the   #
+# Free Software Foundation; either version 2 of the License, or (at your  #
+# option) any later version.                                              #
+# A copy of the GNU General Public License version 2 is in file GPL-2.    #
+###########################################################################
+
+set -e
+
+OS="$(uname)"
+case "$OS" in
+  Darwin)
+    OS="osx"
+    SED="sed -E"
+  ;;
+
+  Linux)
+    OS="linux"
+    SED="sed -r"
+  ;;
+
+  *)
+    echo "E: Unsupported operating '$OS' system" 1>&2
+    exit 1
+  ;;
+esac
+
+# "Normalize" the name, just like docker-compose does it - see:
+#  https://github.com/docker/compose/blob/1.14.0/compose/cli/command.py#L108
+COMPOSE_PROJECT_NAME=$(echo "$1" | tr '[:upper:]' '[:lower:]' | $SED 's/[^a-z0-9]//g')
+if [ "$1" != "$COMPOSE_PROJECT_NAME" ]; then
+  echo "FATAL: $(basename $0) got an invalid input '$1' for parameter #1 - (should be '$COMPOSE_PROJECT_NAME')" 1>&2
+  exit 1
+fi
+
+hosts_file="/etc/hosts"
+
+if [ -z "$COMPOSE_PROJECT_NAME" ]; then
+  echo "USAGE: $(basename $0) COMPOSE_PROJECT_NAME" 1>&2
+  exit 1
+fi
+
+if [ -f "/etc_host_file.from_docker_host" ]; then
+  hosts_file="/etc_host_file.from_docker_host"
+fi
+
+
+ip2dec()
+{
+  local IFS="."
+  declare -i octet1 octet2 octet3 octet4;
+  read -r octet1 octet2 octet3 octet4 <<< "$1"
+  echo $(( octet1 * 256 ** 3 + octet2 * 256 ** 2 + octet3 * 256 + octet4 ))
+}
+
+dec2ip()
+{
+  local IFS=" "
+  declare -i octet1 octet2 octet3 octet4;
+  read -r octet1 octet2 octet3 octet4 <<< $(echo "obase=256; $1" | bc)
+  echo $octet1.$octet2.$octet3.$octet4
+}
+
+
+# Try to get an existing IP from $hosts_file
+PROJECT_IP=$(grep -E -e "^127(\.[0-9]{1,3}){3}[[:space:]].+[[:space:]]###AUTOMATICALLY ADDED FOR ${COMPOSE_PROJECT_NAME}\$" $hosts_file | $SED 's/^([^[:space:]]+).*/\1/' | head -1)
+
+# If $PROJECT_IP is empty, get the next available IP in network 127.177.0.0/16
+if [ -z "$PROJECT_IP" ]; then
+  test_dec_ip=$(ip2dec "127.177.0.0")
+  end_dec_ip=$(ip2dec "127.177.255.254")
+
+  used_ips=$(cat $hosts_file | grep -E -e "^127\.177(\.[0-9]{1,3}){2}[[:space:]]" | $SED 's/^([^[:space:]]+).*/\1/')
+  while [ $test_dec_ip -lt $end_dec_ip ]
+  do
+    ((test_dec_ip++))
+    for used_ip in $used_ips
+    do
+      used_ip_dec=$(ip2dec $used_ip)
+      if [ $used_ip_dec -eq $test_dec_ip ]; then
+        continue 2
+      fi
+    done
+    PROJECT_IP="$(dec2ip $test_dec_ip)"
+    break
+  done
+fi
+
+
+# Print out what we have done
+echo "I: Will use '$PROJECT_IP' for project with name '$COMPOSE_PROJECT_NAME'" 1>&2
+
+echo "$PROJECT_IP"
+
+

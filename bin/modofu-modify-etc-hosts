@@ -1,0 +1,87 @@
+#!/bin/bash
+
+####################################
+# Copyright (c) 2016 - 2017 YMC AG #
+###########################################################################
+# This program is free software; you can redistribute it and/or modify it #
+# under the terms of the GNU General Public License as published by the   #
+# Free Software Foundation; either version 2 of the License, or (at your  #
+# option) any later version.                                              #
+# A copy of the GNU General Public License version 2 is in file GPL-2.    #
+###########################################################################
+
+set -e
+
+OS="$(uname)"
+case "$OS" in
+  Darwin)
+    OS="osx"
+    SED="sed -E"
+  ;;
+
+  Linux)
+    OS="linux"
+    SED="sed -r"
+  ;;
+
+  *)
+    echo "E: Unsupported operating '$OS' system" 1>&2
+    exit 1
+  ;;
+esac
+
+UNIQUE_IDENTIFIER="$1"
+IP_ADDRESS=$2
+NAMES=$3
+hosts_file="/etc/hosts"
+
+if [ -f "/etc_host_file.from_docker_host" ]; then
+  hosts_file="/etc_host_file.from_docker_host"
+fi
+
+# Make a backup, before we override the hosts file
+cp $hosts_file $hosts_file.modofuModifyEtcHosts.$UNIQUE_IDENTIFIER.backup
+
+if [ "$UNIQUE_IDENTIFIER" = "full_clean" ] && \
+   [ -z "$IP_ADDRESS" ] && \
+   [ -z "$NAMES" ]; then
+  # Remove any entry we ever added to the hosts file
+  cat $hosts_file.modofuModifyEtcHosts.$UNIQUE_IDENTIFIER.backup | $SED "/[[:space:]]###AUTOMATICALLY ADDED FOR /d" > $hosts_file
+
+  # Print out what we have done
+  echo "I: Removed any automatically added entries local '/etc/hosts' file" 1>&2
+elif [ -n "$UNIQUE_IDENTIFIER" ] && \
+     [ "$IP_ADDRESS" = "do_clean" ] && \
+     [ -z "$NAMES" ]; then
+  # Remove any entries we made for this project from the hosts file
+  cat $hosts_file.modofuModifyEtcHosts.$UNIQUE_IDENTIFIER.backup | $SED "/[[:space:]]###AUTOMATICALLY ADDED FOR ${UNIQUE_IDENTIFIER}\$/d" > $hosts_file
+
+  # Print out what we have done
+  echo "I: Removed entries in local /etc/hosts file for '$UNIQUE_IDENTIFIER'" 1>&2
+elif [ -n "$UNIQUE_IDENTIFIER" ] || \
+     [ -n "$IP_ADDRESS" ] || \
+     [ -n "$NAMES" ]; then
+  # Prepend a default name
+  NAMES="$UNIQUE_IDENTIFIER.local.modofu.test $NAMES"
+
+  # Print out what we are about to do
+  echo "I: Adding entries in local hosts file for project with id '$UNIQUE_IDENTIFIER'" 1>&2
+
+  # Remove any entries we made for this project from the hosts file
+  cat $hosts_file.modofuModifyEtcHosts.$UNIQUE_IDENTIFIER.backup | $SED "/[[:space:]]###AUTOMATICALLY ADDED FOR ${UNIQUE_IDENTIFIER}\$/d" > $hosts_file
+
+  # Add a new entry
+  echo -e "$IP_ADDRESS\t$NAMES ###AUTOMATICALLY ADDED FOR $UNIQUE_IDENTIFIER" >> $hosts_file
+
+  # Print out what we have done
+  echo "I: Added IP '$IP_ADDRESS' with names '$NAMES' in local '/etc/hosts' file for '$UNIQUE_IDENTIFIER'" 1>&2
+else
+  echo "USAGE: $(basename $0) UNIQUE_IDENTIFIER IP_ADDRESS 'NAME.dev OTHER-NAME.foo'" 1>&2
+  echo "   OR: $(basename $0) UNIQUE_IDENTIFIER do_clean" 1>&2
+  echo "   OR: $(basename $0) full_clean" 1>&2
+  exit 1
+fi
+
+# Remove the backup
+rm -f $hosts_file.modofuModifyEtcHosts.$UNIQUE_IDENTIFIER.backup
+
