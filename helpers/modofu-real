@@ -234,14 +234,15 @@ deal_with_3rd_party_tools()
       fi
     fi
 
-    if ! [ -x "$(which screen)" ]; then
-      echo "W: Command screen not found" 1>&2
+    if ! [ -x "$(which screen)" ] || \
+         [ $(screen -v | grep -c -i GNU) -le 0 ]; then
+      echo "W: Command screen not found or not the GNU variant" 1>&2
       if [ "$mode" = "auto_install" ]; then
         echo "I: Trying to install it. You might need to provide your password..." 1>&2
-        brew install homebrew/dupes/screen
+        brew install screen
         echo "I: Installed." 1>&2
       else
-        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
+        echo "E: Please install the GNU variant of screen manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
         exit 1
       fi
     fi
