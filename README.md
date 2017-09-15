@@ -1,7 +1,7 @@
-MoDoFu
+modofu
 ======
 
-MoDoFu is indented to make your work with docker a bit easier.
+modofu is indented to make your work with docker a bit easier.
 
 INSTALL
 -------
@@ -31,8 +31,8 @@ Working with modofu
 To get some general help how to use modofu, run:
 - `modofu help`
 
-The modofu is intended to be used on a project level, thus you
-first should change directory to a local checkout of your project's code:
+Since modofu is intended to be used on project level, you first should
+change directory to a local checkout of your project's code:
 - `cd ~/path/to/your/projects/code` *Usually this is a git repository*
 
 Afterwards you can run commands like:
