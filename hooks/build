@@ -1,0 +1,3 @@
+#!/bin/bash -x
+MODOFU_DOCKER_IMAGE="$(echo $IMAGE_NAME | sed -r 's|^[^/]+/(.*)|\1|')"
+docker build --pull --build-arg MODOFU_DOCKER_IMAGE="$MODOFU_DOCKER_IMAGE" -t $IMAGE_NAME ./
