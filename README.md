@@ -7,8 +7,8 @@ INSTALL
 -------
 Before you can use modofu, you need to install it on your local system:
 ```
-docker pull ymcag/modofu:stable
-docker run --rm ymcag/modofu:stable install | sudo bash -
+docker pull modofu/modofu:stable
+docker run --rm modofu/modofu:stable install | sudo bash -
 ```
 
 UPGRADE
@@ -22,8 +22,8 @@ UNINSTALL
 ---------
 To remove modofu from you local system run:
 ```
-docker run --rm ymcag/modofu:stable uninstall | sudo bash -
-docker rmi ymcag/modofu:stable
+docker run --rm modofu/modofu:stable uninstall | sudo bash -
+docker rmi modofu/modofu:stable
 ```
 
 Working with modofu

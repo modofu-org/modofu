@@ -1,7 +1,7 @@
 image: registry.ymc.tools:443/docker-images/docker:latest
 
 variables:
-  MODOFU_DOCKER_IMAGE: ymcag/modofu:stable
+  MODOFU_DOCKER_IMAGE: modofu/modofu:stable
 
 stages:
   - build
