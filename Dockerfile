@@ -22,8 +22,10 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/* \
  && echo "OK"
 
-# Add the license file
+# Add the license files
 ADD GPL-2 /usr/local/share/modofu/
+ADD MIT-edition-jekyll-template /usr/local/share/modofu/
+ADD MIT-lunr-js /usr/local/share/modofu/
 
 # Add our scripts
 ADD bin/* /usr/local/bin/

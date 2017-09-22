@@ -41,12 +41,26 @@ Afterwards you can run commands like:
 - `modofu dev remove` *to get rid of your local development setup*
 - `modofu dev help` *to get a list of supported other `dev` arguments*
 
-LICENSE
--------
+LICENSE for: "modofu"
+-----------
 Copyright (c) 2016 - 2017 YMC AG
 This program is free software; you can redistribute it and/or modify it
 under the terms of the GNU General Public License as published by the
 Free Software Foundation; either version 2 of the License, or (at your
 option) any later version.
 A copy of the GNU General Public License version 2 is in file GPL-2.
+
+LICENSE for: "Edition" Jekyll template
+-----------
+Copyright (c) 2016 CloudCannon
+The "Edition" Jekyll template, used by the modofu documentation, is
+licensed under the MIT License (MIT).
+A copy of this MIT License is in file MIT-edition-jekyll-template.
+
+LICENSE for: "lunr.js"
+-----------
+Copyright (C) 2013 by Oliver Nightingale
+Within the documentation "lunr.js" is used, which is licensed under
+the MIT License (MIT).
+A copy of this MIT License is in file MIT-lunr-js.
 
