@@ -50,6 +50,20 @@ Free Software Foundation; either version 2 of the License, or (at your
 option) any later version.
 A copy of the GNU General Public License version 2 is in file GPL-2.
 
+LICENSE for: "Whale by Laymik from the Noun Project"
+-----------
+"Whale by Laymik from the Noun Project" (c) by Laymik <maludk@i.ua>
+
+"Whale by Laymik from the Noun Project" is used as the modofu logo
+and was only changed in color of the whale (originally black) and
+the background (originally transparent).
+
+"Whale by Laymik from the Noun Project" is licensed under a
+Creative Commons Attribution 3.0 United States License (CC BY 3.0 US).
+
+A copy of this License is in file CC-BY-3.0-US, but can be viewed online, too:
+<https://creativecommons.org/licenses/by/3.0/us/>.
+
 LICENSE for: "Edition" Jekyll template
 -----------
 Copyright (c) 2016 CloudCannon
