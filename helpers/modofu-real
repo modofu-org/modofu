@@ -390,7 +390,7 @@ start_devel_env()
     fi
   done
 
-  docker-compose up -d
+  docker-compose up --no-build -d
 
   echo "I: App is now starting, this could take a moment. Use command" 1>&2
   echo "     # export COMPOSE_PATH_SEPARATOR='$COMPOSE_PATH_SEPARATOR'" 1>&2
