@@ -447,6 +447,15 @@ devel_env_info()
 
 }
 
+pull_devel_env()
+{
+  echo "I: Pulling fresh images for development environment..." 1>&2
+  provide_basic_informations
+
+  docker-compose pull
+}
+
+
 build_devel_env()
 {
   echo "I: (Re-)Building development environment..." 1>&2
@@ -512,6 +521,10 @@ case "$1" in
         devel_env_info
       ;;
 
+      pull)
+        pull_devel_env
+      ;;
+
       build)
         build_devel_env
       ;;
@@ -539,6 +552,7 @@ case "$1" in
         echo "Command '$1' supports the following arguments:" 1>&2
         echo "    help" 1>&2
         echo "    info" 1>&2
+        echo "    pull" 1>&2
         echo "    build" 1>&2
         echo "    start" 1>&2
         echo "    stop" 1>&2
