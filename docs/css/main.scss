@@ -29,3 +29,48 @@ $full-width-break: $nav-width + ($space * 4) + $content-max-width;
 @import "code";
 @import "tables";
 @import "layout";
+
+
+
+article.content p {
+  margin: 0;
+}
+
+
+
+article.content ul, article.content ol {
+  margin: 0;
+  margin-top: 0.2em;
+}
+
+article.content > ol > li, article.content > ul > li {
+  margin-top: 1em;
+}
+
+
+article.content > ul.note {
+  list-style-type: none;
+  padding: 0;
+}
+
+ul.note > li {
+  font-size: 1.1em;
+  margin-bottom: 1.2em;
+  padding-left: 0.5em;
+  padding-top: 5px;
+  background-color: $brand-colour-light;
+  border-left: 5px solid $brand-colour;
+}
+
+ul.note > li > blockquote {
+  background-color: $brand-colour-light;
+  border-color: $brand-colour;
+  margin-top: 0.1em;
+  margin-left: -0.3em;
+  margin-right: 0em;
+  padding: 0.2em;
+  padding-left: 0.5em;
+  font-size: 0.75em;
+  border: none;
+}
+

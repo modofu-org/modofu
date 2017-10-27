@@ -1,8 +1,8 @@
 # ----
 # Site
 
-title: modofu
-url: "http://www.modofu.org"
+title: modofu documentation
+url: "http://doc.modofu.org"
 baseurl:
 google_analytics_key:
 show_full_navigation: true
