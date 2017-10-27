@@ -405,12 +405,36 @@ start_devel_env()
   echo "     # docker-compose logs -f" 1>&2
   echo "   to view the progress." 1>&2
 
+  # Get running containers
+  container_ids=$(docker-compose ps -q)
+
   # Process each each container
-  for container_id in $(docker-compose ps -q)
+  for container_id in $container_ids
   do
     if [ $(docker exec -u root $container_id cat /etc/hosts | grep -c -F "$LOCAL_DOCKER_HOST_IP docker-host.local.modofu.test") -le 0 ]; then
       docker exec -u root $container_id sh -c "echo '$LOCAL_DOCKER_HOST_IP docker-host.local.modofu.test' >> /etc/hosts" || true
     fi
+  done
+
+  # Run start.d in each container
+  echo "I: Running '/modofu/start.d/*' within each container..." 1>&2
+  docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-start-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script
+  for container_id in $container_ids
+  do
+    # Test if we have sh in the container
+    docker exec -i -u root $container_id /usr/bin/env sh -c "exit 0"
+    if [ $? -ne 0 ]; then
+      echo "I: No, 'sh' is not present in container with id '$container_id'." 1>&2
+      echo "   Will not try to run '/modofu/start.d/*' within this container." 1>&2
+      continue
+    fi
+
+    echo "I: Running '/modofu/start.d/*' in container with id '$container_id'..." 1>&2
+    docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script $container_id:/tmp/modofu-run-start-d-in-container
+    docker exec -u root $container_id chmod 700 /tmp/modofu-run-start-d-in-container
+    docker exec -it -u root $container_id /tmp/modofu-run-start-d-in-container
+    docker exec -u root $container_id rm -f /tmp/modofu-run-start-d-in-container
+    echo "I: Finished running '/modofu/start.d/*' in container with id '$container_id'..." 1>&2
   done
 }
 
