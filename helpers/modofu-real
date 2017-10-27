@@ -222,7 +222,7 @@ deal_with_3rd_party_tools()
       fi
     else
       local docker_sync_working=1
-      docker-sync -v || docker_sync_working=0
+      docker-sync -v 1>/dev/null 2>&1 || docker_sync_working=0
       if [ $docker_sync_working -ne 1 ]; then
         echo "E: Your docker-sync installation is broken. Please ensure you can successfully run at least '# docker-sync -v'" 1>&2
         exit 1
