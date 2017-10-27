@@ -43,14 +43,7 @@
 
       <nav {% if site.show_full_navigation %}class="full-navigation"{% endif %}>
         <ul>
-          <li class="nav-item top-level {% if page.url == '/' %}current{% endif %}">
-            {% assign home = site.html_pages | where: 'url', '/' | first %}
-            <a href="{{ site.baseurl }}/">{{ home.title }}</a>
-          </li>
-        </ul>
-
-        <ul>
-          {% assign grouped = site.docs | group_by: 'category' %}
+          {% assign grouped = site.docs | sort: 'order' | group_by: 'category' %}
           {% for group in grouped %}
             <li class="nav-item top-level {% if group.name == page.category %}current{% endif %}">
               {% assign items = group.items | sort: 'order' %}
@@ -62,6 +55,21 @@
               </ul>
             </li>
           {% endfor %}
+        </ul>
+
+        <ul>
+        {% assign home = site.html_pages | where: 'url', '/' | first %}
+          <li class="nav-item top-level {% if page.category == home.category %}current{% endif %}">
+            <a href="{{ site.baseurl }}/">{% if home.nav_title %}{{ home.nav_title }}{% else %}{{ home.title }}{% endif %}</a>
+            {% assign base_docs = site.html_pages | sort: 'order' | where: 'category', home.category %}
+            <ul>
+              {% for item in base_docs %}
+                {% if item.title != home.title %}
+                  <li class="nav-item {% if item.url == page.url %}current{% endif %}"><a href="{{ site.baseurl }}{{ item.url }}">{{ item.title }}</a></li>
+                {% endif %}
+              {% endfor %}
+            </ul>
+          </li>
         </ul>
 
         <!--ul>
