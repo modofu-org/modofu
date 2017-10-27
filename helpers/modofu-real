@@ -22,6 +22,7 @@ fi
 
 GENERIC_LOCAL_TEST_IP="127.254.253.251"
 LOCAL_DOCKER_HOST_IP="203.0.113.177"
+MODOFU_LOCAL_DOCUMENTATION_IP="127.254.253.252"
 
 OS="$(uname)"
 case "$OS" in
@@ -867,6 +868,42 @@ case "$1" in
     esac
   ;;
 
+  doc)
+    case "$2" in
+      ''|read)
+        if [ "$OS" = "osx" ]; then
+          # Bring up the MODOFU_LOCAL_DOCUMENTATION_IP
+          echo "I: Adding modofu local documentation ip the loopback device. You might need to provide your password..." 1>&2
+          sudo ifconfig lo0 alias $MODOFU_LOCAL_DOCUMENTATION_IP 255.0.0.0
+        fi
+        int_add_entries_to_etc_hosts modofudoc $MODOFU_LOCAL_DOCUMENTATION_IP "doc.modofu.local"
+        docker run \
+          --rm \
+          -it \
+          -e GEM_PATH=/modofu-doc-server/ruby/2.3.0 \
+          -p $MODOFU_LOCAL_DOCUMENTATION_IP:80:4000 \
+          --workdir /usr/local/share/modofu/github-pages \
+          modofu/modofu:stable \
+          /modofu-doc-server/ruby/2.3.0/bin/jekyll serve --host 0.0.0.0
+        if [ "$OS" = "osx" ]; then
+          # Bring down the MODOFU_LOCAL_DOCUMENTATION_IP
+          echo "I: Removing modofu local documentation ip the loopback device. You might need to provide your password..." 1>&2
+          sudo ifconfig lo0 alias $MODOFU_LOCAL_DOCUMENTATION_IP 255.0.0.0
+        fi
+      ;;
+
+      --help|-h)
+        echo "Command '$1' supports the following arguments:" 1>&2
+        echo "    read" 1>&2
+      ;;
+
+      *)
+        echo "E: Command '$1' does not support argument '$2'" 1>&2
+        exit 1
+      ;;
+    esac
+  ;;
+
   self-upgrade)
     self_upgrade
   ;;
@@ -909,6 +946,7 @@ case "$1" in
     echo "USAGE: $MODOFU_SCRIPT_NAME COMMAND [argument...]" 1>&2
     echo "Commands:" 1>&2
     echo "    help" 1>&2
+    echo "    doc" 1>&2
     echo "    dev" 1>&2
     echo "    self-upgrade" 1>&2
     echo "    auto-install-3rd-party-tools" 1>&2
