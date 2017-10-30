@@ -283,7 +283,7 @@ start_devel_env()
     sudo ifconfig lo0 alias $LOCAL_DOCKER_HOST_IP 255.0.0.0
   elif [ "$OS" = "linux" ]; then
     # Bring up a static ip where we can be sure to always reach the local docker host
-    if [ $(docker network inspect modofu-local-docker-host | grep -c -F "$LOCAL_DOCKER_HOST_IP") -le 0 ]; then
+    if [ $(docker network inspect modofu-local-docker-host 2>/dev/null | grep -c -F "$LOCAL_DOCKER_HOST_IP") -le 0 ]; then
       # Ensure the docker network 'modofu-local-docker-host' does not exists
       docker network rm modofu-local-docker-host 2>/dev/null 1>/dev/null || true
       echo "I: Adding a local ip where the docker host can be reached from the docker containers..." 1>&2
