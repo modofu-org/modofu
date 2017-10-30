@@ -492,7 +492,7 @@ build_devel_env()
   echo "I: (Re-)Building development environment..." 1>&2
   provide_basic_informations
 
-  docker-compose build
+  docker-compose build --pull
 }
 
 stop_devel_env()
