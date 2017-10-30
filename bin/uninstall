@@ -19,6 +19,9 @@ set -e
 
 echo "I: Uninstalling modofu from your local system..." 1>&2
 if [ -e "/usr/local/bin/modofu" ]; then
+  echo "I: Trying to remove docker volume 'modofu-cache'..." 1>&2
+  docker volume remove modofu-cache || echo "W: Failed to remove docker volume 'modofu-cache'. It might be still in use. You can remove it later manually with '# docker vilume rm modofu-cache'." 1>&2
+
   echo "I: Removing automatically added entries from '/etc/hosts'..." 1>&2
   /usr/local/bin/modofu internal-uninstall-helper
 

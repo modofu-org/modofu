@@ -273,6 +273,14 @@ deal_with_3rd_party_tools()
 start_devel_env()
 {
   echo "I: Starting development environment..." 1>&2
+
+  # Check if the modofu-cache volume is present
+  if [ $(docker volume inspect modofu-cache 2>/dev/null | grep -c -F ': "modofu-cache"') -le 0 ]; then
+    # Add the modofu name cache volume
+    echo "I: Adding named docker volume 'modofu-cache'" 1>&2
+    docker volume create --driver local modofu-cache
+  fi
+
   if [ "$OS" = "osx" ]; then
     # Bring up the GENERIC_LOCAL_TEST_IP
     echo "I: Adding a generic local test ip on the loopback device. You might need to provide your password..." 1>&2
