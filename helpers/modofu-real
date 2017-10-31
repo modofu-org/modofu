@@ -59,6 +59,12 @@ if ! [ -x "$(which nc)" ]; then
   exit 1
 fi
 
+NEED_DOCKER_SYNC=0
+if [ "$OS" = "osx" ] && \
+   [ -f "./docker-sync.yml" ]; then
+  NEED_DOCKER_SYNC=1
+fi
+
 provide_basic_informations()
 {
   if [ ! -f .env ]; then
@@ -175,7 +181,10 @@ deal_with_3rd_party_tools()
 
   echo "I: Checking if all required 3rd-party tools are present on the local system..." 1>&2
 
-  if [ "$OS" = "osx" ]; then
+  if [ "$OS" = "osx" ] && \
+     [ $NEED_DOCKER_SYNC -eq 1 ]; then
+    echo "I: Checking for docker-sync related 3rd-party-tools, since a docker-sync.yml is used in the project" 1>&2
+
     if ! [ -x "$(which brew)" ]; then
       echo "W: Command brew (homebrew) not found." 1>&2
       if [ "$mode" = "auto_install" ]; then
