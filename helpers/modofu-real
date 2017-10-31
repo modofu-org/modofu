@@ -316,76 +316,78 @@ start_devel_env()
 
   if [ "$OS" = "osx" ]; then
 
-    # Check if solely unison is used
-    if [ $(docker-sync list --verbose | grep strategy | $SED 's/[^[:space:]]+[[:space:]]+(.*)/\1/' | grep -c -v -E -e '^unison$') -gt 0 ]; then
-      echo "E: Currently only 'unison' is supported for docker-sync. Please ensure you use" 1>&2
-      echo "   sync_strategy: 'unison'" 1>&2
-      echo "   In your docker-sync.yml configuration file." 1>&2
-      exit 1
-    fi
-
-    echo "UNKNOWN" > /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status
-
-    # Store the docker-sync-watchdog on the local system for later execution
-    docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat /usr/local/share/modofu/modofu-docker-sync-watchdog-real' > /tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script
-    chmod 755 /tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script
-
-    # Open a new screen for docker-sync-watchdog (if needed)
-    if [ $(screen -ls docker-sync-watchdog.$COMPOSE_PROJECT_NAME | grep -c "\.docker-sync-watchdog.$COMPOSE_PROJECT_NAME[[:space:]]") -le 0 ]; then
-      echo "I: Opening a new screen docker-sync-watchdog.$COMPOSE_PROJECT_NAME" 1>&2
-      screen -s /bin/bash -dmS docker-sync-watchdog.$COMPOSE_PROJECT_NAME && sleep 1
-    fi
-
-    # Terminate a potentially running docker-sync-watchdog in that screen
-    screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n"
-
-    # Wait a bit
-    sleep 1
-
-    # Start the docker-sync-watchdog
-    screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"/tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script $COMPOSE_PROJECT_NAME\n"
-
-    # Wait again a bit
-    sleep 1
-
-    echo "Waiting for docker-sync to get ready..." 1>&2
-    loop_protection=120
-    while [ $loop_protection -gt 0 ]
-    do
-      let loop_protection--
-      if [ ! -r "/tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status" ]; then
-        echo "E: File '/tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status' not present." 1>&2
-        echo "   The docker-sync-watchdog is most likely broken, please contact the modofu developers!" 1>&2
+    if [ $NEED_DOCKER_SYNC -eq 1 ]; then
+      # Check if solely unison is used
+      if [ $(docker-sync list --verbose | grep strategy | $SED 's/[^[:space:]]+[[:space:]]+(.*)/\1/' | grep -c -v -E -e '^unison$') -gt 0 ]; then
+        echo "E: Currently only 'unison' is supported for docker-sync. Please ensure you use" 1>&2
+        echo "   sync_strategy: 'unison'" 1>&2
+        echo "   In your docker-sync.yml configuration file." 1>&2
         exit 1
       fi
 
-      if [ $(cat /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status | grep -c "SYNCED") -eq 1 ]; then
-        break
-      elif [ $(cat /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status | grep -c "ASKPASS") -eq 1 ]; then
-        echo "" 1>&2
-        read -s -p "Docker-Sync asks for your password, please provide it:" pw_for_docker_sync
-        screen -S docker-sync.$COMPOSE_PROJECT_NAME -X stuff $"$pw_for_docker_sync\n"
-        pw_for_docker_sync="iudfhgw98w54zhgoipaerzfw45hgera6f54gug86fsdfg"
-        unset pw_for_docker_sync
-        sleep 1
-        echo "" 1>&2
-      else
-        sleep 1
+      echo "UNKNOWN" > /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status
+
+      # Store the docker-sync-watchdog on the local system for later execution
+      docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat /usr/local/share/modofu/modofu-docker-sync-watchdog-real' > /tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script
+      chmod 755 /tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script
+
+      # Open a new screen for docker-sync-watchdog (if needed)
+      if [ $(screen -ls docker-sync-watchdog.$COMPOSE_PROJECT_NAME | grep -c "\.docker-sync-watchdog.$COMPOSE_PROJECT_NAME[[:space:]]") -le 0 ]; then
+        echo "I: Opening a new screen docker-sync-watchdog.$COMPOSE_PROJECT_NAME" 1>&2
+        screen -s /bin/bash -dmS docker-sync-watchdog.$COMPOSE_PROJECT_NAME && sleep 1
       fi
 
-      echo -e -n "Waiting (${loop_protection}s)...                         \r" 1>&2
-    done
-    if [ $loop_protection -le 0 ]; then
-      echo "...FAILED                                                        " 1>&2
-      echo "E: Starting docker-sync took too long (or just failed)." 1>&2
-      echo "I: If you are familiar with screen, you might want to debug this:" 1>&2
-      echo "   - Check the output of docker-sync by entering the screen it is running in with:" 1>&2
-      echo "     # screen -r docker-sync.$COMPOSE_PROJECT_NAME" 1>&2
-      echo "   - Check the status of the docker-sync-watchdog by entering the screen it is running in with:" 1>&2
-      echo "     # screen -r docker-sync-watchdog.$COMPOSE_PROJECT_NAME" 1>&2
-      exit 1
-    else
-      echo "...OKAY                                                          " 1>&2
+      # Terminate a potentially running docker-sync-watchdog in that screen
+      screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n"
+
+      # Wait a bit
+      sleep 1
+
+      # Start the docker-sync-watchdog
+      screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"/tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script $COMPOSE_PROJECT_NAME\n"
+
+      # Wait again a bit
+      sleep 1
+
+      echo "Waiting for docker-sync to get ready..." 1>&2
+      loop_protection=120
+      while [ $loop_protection -gt 0 ]
+      do
+        let loop_protection--
+        if [ ! -r "/tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status" ]; then
+          echo "E: File '/tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status' not present." 1>&2
+          echo "   The docker-sync-watchdog is most likely broken, please contact the modofu developers!" 1>&2
+          exit 1
+        fi
+
+        if [ $(cat /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status | grep -c "SYNCED") -eq 1 ]; then
+          break
+        elif [ $(cat /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status | grep -c "ASKPASS") -eq 1 ]; then
+          echo "" 1>&2
+          read -s -p "Docker-Sync asks for your password, please provide it:" pw_for_docker_sync
+          screen -S docker-sync.$COMPOSE_PROJECT_NAME -X stuff $"$pw_for_docker_sync\n"
+          pw_for_docker_sync="iudfhgw98w54zhgoipaerzfw45hgera6f54gug86fsdfg"
+          unset pw_for_docker_sync
+          sleep 1
+          echo "" 1>&2
+        else
+          sleep 1
+        fi
+
+        echo -e -n "Waiting (${loop_protection}s)...                         \r" 1>&2
+      done
+      if [ $loop_protection -le 0 ]; then
+        echo "...FAILED                                                        " 1>&2
+        echo "E: Starting docker-sync took too long (or just failed)." 1>&2
+        echo "I: If you are familiar with screen, you might want to debug this:" 1>&2
+        echo "   - Check the output of docker-sync by entering the screen it is running in with:" 1>&2
+        echo "     # screen -r docker-sync.$COMPOSE_PROJECT_NAME" 1>&2
+        echo "   - Check the status of the docker-sync-watchdog by entering the screen it is running in with:" 1>&2
+        echo "     # screen -r docker-sync-watchdog.$COMPOSE_PROJECT_NAME" 1>&2
+        exit 1
+      else
+        echo "...OKAY                                                          " 1>&2
+      fi
     fi
 
     echo "I: Adding local project IP on the loopback device. You might need to provide your password..." 1>&2
@@ -487,7 +489,7 @@ devel_env_info()
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev stop' to stop the app" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev info' to see this this summary again" 1>&2
 
-  if [ "$OS" = "osx" ]; then
+  if [ $NEED_DOCKER_SYNC -eq 1 ]; then
     echo "" 1>&2
     echo "I: If you are interested in the output of docker-sync, enter it's screen with:" 1>&2
     echo "   # screen -r docker-sync.$COMPOSE_PROJECT_NAME" 1>&2
@@ -518,9 +520,11 @@ stop_devel_env()
   provide_basic_informations
   provide_domain_informations
 
-  # Terminate docker-sync-watchdog (if needed)
-  screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n" 1>/dev/null 2>/dev/null && sleep 5 || true
-  screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X quit 1>/dev/null 2>/dev/null || true
+  if [ $NEED_DOCKER_SYNC -eq 0 ]; then
+    # Terminate docker-sync-watchdog (if needed)
+    screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n" 1>/dev/null 2>/dev/null && sleep 5 || true
+    screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X quit 1>/dev/null 2>/dev/null || true
+  fi
 
   docker-compose stop
 }
@@ -529,6 +533,8 @@ clean_devel_sync()
 {
   if [ "$OS" = "linux" ]; then
     echo "I: A sync workaround is not needed under linux, thus there is nothing to clean." 1>&2
+  elif [ $NEED_DOCKER_SYNC -eq 0 ]; then
+    echo "I: docker-sync is not in use in this project, thus there is nothing to clean." 1>&2
   elif [ "$OS" = "osx" ]; then
     stop_devel_env
     if [ "$1" = "remove" ]; then
