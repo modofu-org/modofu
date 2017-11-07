@@ -625,6 +625,54 @@ case "$1" in
         devel_env_info
       ;;
 
+      exec)
+        shift 2
+        run_as_user_option=""
+        while :;
+        do
+          case $1 in
+
+            ''|help|--help|-h)
+              echo "Usage: # modofu dev exec [options] SERVICE COMMAND [COMMAND ARGS...]" 1>&2
+              echo ""
+              echo "Options:" 1>&2
+              echo "    -u|--user=USER       Run the command as this user." 1>&2
+            ;;
+
+            -u|--user)
+              run_as_user_option="--user $2"
+              shift
+            ;;
+
+            -u=?*|--user=?*)
+              run_as_user_option="--user ${1#*=}"
+            ;;
+
+            --)
+              shift
+              break
+            ;;
+
+            -?*)
+              echo "Command 'dev' with argument 'exec' does not support option '$1'" >&2
+              exit 1
+            ;;
+
+            *)
+              break;
+            ;;
+          esac
+          shift
+        done
+
+        container_to_use="$1"
+        shift
+
+        provide_basic_informations
+        container_name="$1"
+        docker-compose exec $run_as_user_option $container_to_use "$@"
+      ;;
+
       stop)
         stop_devel_env
       ;;
@@ -646,6 +694,7 @@ case "$1" in
         echo "    pull" 1>&2
         echo "    build" 1>&2
         echo "    start" 1>&2
+        echo "    exec" 1>&2
         echo "    stop" 1>&2
         echo "    clean-sync" 1>&2
         echo "    remove" 1>&2
