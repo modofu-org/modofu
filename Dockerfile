@@ -18,6 +18,7 @@ ENV MODOFU_DOCKER_IMAGE $MODOFU_DOCKER_IMAGE
 RUN apt-get update \
  && apt-get -y install \
       bc \
+      jq \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && echo "OK"
