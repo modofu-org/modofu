@@ -456,8 +456,32 @@ start_devel_env()
     fi
 
     container_name="$(get_docker_container_name_by_container_id $container_id)"
+    no_project_prefix_container_name="$(echo $container_name | $SED 's/^'${COMPOSE_PROJECT_NAME}'_//')"
+    service_name="$(echo $no_project_prefix_container_name | $SED 's/_[0-9]+$//')"
+
     echo "I: Running '/modofu/start.d/*' in container '$container_name'..." 1>&2
     echo "I: Container '$container_name' has id '$container_id'" 1>&2
+
+    if [ -d "./modofu/containers/$service_name/start.d" ]; then
+      echo "I: Copying contents in './modofu/containers/$service_name/start.d'" 1>&2
+      echo "   to '$container_name:/modofu/start.d/'" 1>&2
+      docker exec $container_id mkdir /modofu 2>/dev/null || true
+      docker cp ./modofu/containers/$service_name/start.d $container_id:/modofu/
+    else
+      echo "I: Directory './modofu/containers/$service_name/start.d' does not exists," 2>&1
+      echo "   NOT coping anything to '$container_name:/modofu/start.d/'" 1>&2
+    fi
+
+    if [ -d "./modofu/containers/$no_project_prefix_container_name/start.d" ]; then
+      echo "I: Copying contents in './modofu/containers/$no_project_prefix_container_name/start.d'" 1>&2
+      echo "   to '$container_name:/modofu/start.d/'" 1>&2
+      docker exec $container_id mkdir /modofu 2>/dev/null || true
+      docker cp ./modofu/containers/$no_project_prefix_container_name/start.d $container_id:/modofu/
+    else
+      echo "I: Directory './modofu/containers/$container_name/start.d' does not exists," 1>&2
+      echo "   NOT coping anything to '$container_name:/modofu/start.d/'" 1>&2
+    fi
+
     docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script $container_id:/tmp/modofu-run-start-d-in-container
     docker exec -u root $container_id chmod 700 /tmp/modofu-run-start-d-in-container
     docker exec -it -u root $container_id /tmp/modofu-run-start-d-in-container
