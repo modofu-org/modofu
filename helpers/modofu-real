@@ -319,6 +319,9 @@ start_devel_env()
   provide_basic_informations
   deal_with_3rd_party_tools exit_with_error_if_missing
 
+  # Print out which ip we use
+  echo "I: Will use '$PROJECT_DEV_IP' for project with name '$COMPOSE_PROJECT_NAME'" 1>&2
+
   if [ "$OS" = "osx" ]; then
 
     if [ $NEED_DOCKER_SYNC -eq 1 ]; then

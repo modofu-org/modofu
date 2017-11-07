@@ -91,10 +91,6 @@ if [ -z "$PROJECT_IP" ]; then
   done
 fi
 
-
-# Print out what we have done
-echo "I: Will use '$PROJECT_IP' for project with name '$COMPOSE_PROJECT_NAME'" 1>&2
-
 echo "$PROJECT_IP"
 
 
