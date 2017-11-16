@@ -450,15 +450,17 @@ start_devel_env()
   docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-start-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script
   for container_id in $container_ids
   do
+    container_name="$(get_docker_container_name_by_container_id $container_id)"
+
     # Test if we have sh in the container
+    echo "I: Checking for 'sh' in container '$container_name'..." 1>&2
     docker exec -i -u root $container_id /usr/bin/env sh -c "exit 0"
     if [ $? -ne 0 ]; then
-      echo "I: No, 'sh' is not present in container with id '$container_id'." 1>&2
+      echo "I: No 'sh' is not present in container '$container_name'." 1>&2
       echo "   Will not try to run '/modofu/start.d/*' within this container." 1>&2
       continue
     fi
 
-    container_name="$(get_docker_container_name_by_container_id $container_id)"
     no_project_prefix_container_name="$(echo $container_name | $SED 's/^'${COMPOSE_PROJECT_NAME}'_//')"
     service_name="$(echo $no_project_prefix_container_name | $SED 's/_[0-9]+$//')"
 
