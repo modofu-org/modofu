@@ -451,6 +451,7 @@ start_devel_env()
   for container_id in $container_ids
   do
     container_name="$(get_docker_container_name_by_container_id $container_id)"
+    echo "I: Processing container '$container_name' with id '$container_id'" 1>&2
 
     # Test if we have sh in the container
     echo "I: Checking for 'sh' in container '$container_name'..." 1>&2
@@ -465,8 +466,6 @@ start_devel_env()
     service_name="$(echo $no_project_prefix_container_name | $SED 's/_[0-9]+$//')"
 
     echo "I: Running '/modofu/start.d/*' in container '$container_name'..." 1>&2
-    echo "I: Container '$container_name' has id '$container_id'" 1>&2
-
     if [ -d "./modofu/containers/$service_name/start.d" ]; then
       echo "I: Copying contents in './modofu/containers/$service_name/start.d'" 1>&2
       echo "   to '$container_name:/modofu/start.d/'" 1>&2
