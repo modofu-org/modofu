@@ -438,8 +438,8 @@ start_devel_env()
   # Process each each container
   for container_id in $container_ids
   do
-    if [ $(docker exec -u root $container_id cat /etc/hosts | grep -c -F "$LOCAL_DOCKER_HOST_IP docker-host.local.modofu.test") -le 0 ]; then
-      docker exec -u root $container_id sh -c "echo '$LOCAL_DOCKER_HOST_IP docker-host.local.modofu.test' >> /etc/hosts" || true
+    if [ $(docker exec -u 0 $container_id cat /etc/hosts | grep -c -F "$LOCAL_DOCKER_HOST_IP docker-host.local.modofu.test") -le 0 ]; then
+      docker exec -u 0 $container_id sh -c "echo '$LOCAL_DOCKER_HOST_IP docker-host.local.modofu.test' >> /etc/hosts" || true
     fi
   done
 
@@ -454,7 +454,7 @@ start_devel_env()
 
     # Test if we have sh in the container
     echo "I: Checking for 'sh' in container '$container_name'..." 1>&2
-    docker exec -i -u root $container_id /usr/bin/env sh -c "exit 0" && sh_present_in_container=1 || sh_present_in_container=0
+    docker exec -i -u 0 $container_id /usr/bin/env sh -c "exit 0" && sh_present_in_container=1 || sh_present_in_container=0
     if [ $sh_present_in_container -ne 1 ]; then
       echo "I: No 'sh' is not present in container '$container_name'." 1>&2
       echo "   Will not try to run '/modofu/start.d/*' within this container." 1>&2
@@ -488,9 +488,9 @@ start_devel_env()
     fi
 
     docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script $container_id:/tmp/modofu-run-start-d-in-container
-    docker exec -u root $container_id chmod 700 /tmp/modofu-run-start-d-in-container
-    docker exec -it -u root $container_id /tmp/modofu-run-start-d-in-container
-    docker exec -u root $container_id rm -f /tmp/modofu-run-start-d-in-container
+    docker exec -u 0 $container_id chmod 700 /tmp/modofu-run-start-d-in-container
+    docker exec -it -u 0 $container_id /tmp/modofu-run-start-d-in-container
+    docker exec -u 0 $container_id rm -f /tmp/modofu-run-start-d-in-container
     echo "I: Finished running '/modofu/start.d/*' in container '$container_name'..." 1>&2
     echo "" 1>&2
   done
