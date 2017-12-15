@@ -62,7 +62,7 @@ dec2ip()
 {
   local IFS=" "
   declare -i octet1 octet2 octet3 octet4;
-  read -r octet1 octet2 octet3 octet4 <<< $(echo "obase=256; $1" | bc | sed -r 's/ ([0-9])/ 10#\1/g')
+  read -r octet1 octet2 octet3 octet4 <<< $(echo "obase=256; $1" | bc | $SED 's/ ([0-9])/ 10#\1/g')
   echo $octet1.$octet2.$octet3.$octet4
 }
 
