@@ -160,7 +160,7 @@ int_add_entries_to_etc_hosts()
 get_docker_container_name_by_container_id()
 {
   local container_id="$1"
-  docker inspect $container_id | docker run --rm -i modofu/modofu:stable bash -c "cat - | jq .[0].Name | sed -r 's|\"/?(.*)\"$|\1|'"
+  docker inspect $container_id | docker run --rm -i modofu/modofu:stable bash -c "cat - | jq .[0].Name | $SED 's|\"/?(.*)\"$|\1|'"
 }
 
 provide_domain_informations()
