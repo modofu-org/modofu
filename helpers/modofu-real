@@ -639,7 +639,7 @@ case "$1" in
         do
           case $1 in
 
-            ''|help|--help|-h)
+            ''|--help|-h)
               int_dev_exec_help
               exit 0
             ;;
