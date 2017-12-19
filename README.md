@@ -39,7 +39,7 @@ Afterwards you can run commands like:
 - `modofu dev start` *to start your local development setup*
 - `modofu dev stop` *to stop your local development setup*
 - `modofu dev remove` *to get rid of your local development setup*
-- `modofu dev help` *to get a list of supported other `dev` arguments*
+- `modofu dev --help` *to get a list of supported other `dev` arguments*
 
 LICENSE for: "modofu"
 -----------

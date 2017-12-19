@@ -697,9 +697,8 @@ case "$1" in
         clean_devel_sync no-remove
       ;;
 
-      ''|help)
+      ''|help|--help)
         echo "Command '$1' supports the following arguments:" 1>&2
-        echo "    help" 1>&2
         echo "    info" 1>&2
         echo "    pull" 1>&2
         echo "    build" 1>&2
