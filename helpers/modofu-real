@@ -624,7 +624,7 @@ case "$1" in
           echo "Options:" 1>&2
           echo "    --force-rm       Always remove intermediate containers." 1>&2
           echo "    --no-cache       Do not use cache when building the image." 1>&2
-          echo "    --no-pull        Do refresh intermediate images." 1>&2
+          echo "    --no-pull        Do not refresh intermediate images." 1>&2
         }
         force_rm_option=""
         no_cache_option=""
