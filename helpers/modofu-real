@@ -548,7 +548,7 @@ build_devel_env()
   echo "I: (Re-)Building development environment..." 1>&2
   provide_basic_informations
 
-  docker-compose build --pull
+  docker-compose build "$@"
 }
 
 stop_devel_env()
@@ -617,7 +617,58 @@ case "$1" in
       ;;
 
       build)
-        build_devel_env
+        int_dev_build_help()
+        {
+          echo "Usage: # modofu dev build [options] [SERVICE...]" 1>&2
+          echo ""
+          echo "Options:" 1>&2
+          echo "    --force-rm       Always remove intermediate containers." 1>&2
+          echo "    --no-cache       Do not use cache when building the image." 1>&2
+          echo "    --no-pull        Do refresh intermediate images." 1>&2
+        }
+        force_rm_option=""
+        no_cache_option=""
+        pull_option="--pull"
+        shift 2
+        while :;
+        do
+          case $1 in
+
+            --help|-h)
+              int_dev_build_help
+              exit 0
+            ;;
+
+            --force-rm)
+              force_rm_option="--force-rm"
+            ;;
+
+            --no-cache)
+              no_cache_option="--no-cache"
+            ;;
+
+            --no-pull)
+              pull_option=""
+            ;;
+
+            --)
+              shift
+              break
+            ;;
+
+            -?*)
+              echo "Command 'dev' with argument 'build' does not support option '$1'" >&2
+              exit 1
+            ;;
+
+            *)
+              break;
+            ;;
+          esac
+          shift
+        done
+
+        build_devel_env $force_rm_option $no_cache_option $pull_option "$@"
       ;;
 
       start)
