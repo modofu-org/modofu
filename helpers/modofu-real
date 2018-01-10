@@ -163,6 +163,12 @@ get_docker_container_name_by_container_id()
   docker inspect $container_id | docker run --rm -i modofu/modofu:stable bash -c "cat - | jq .[0].Name | $SED 's|\"/?(.*)\"$|\1|'"
 }
 
+get_docker_compose_service_name_by_container_id()
+{
+  local container_id="$1"
+  docker inspect $container_id | docker run --rm -i modofu/modofu:stable bash -c "cat - | jq '.[0].Config.Labels.\"com.docker.compose.service\"' | sed -r 's|\"/?(.*)\"$|\1|'"
+}
+
 provide_domain_informations()
 {
   local_domain_names=$(grep "^$PROJECT_DEV_IP.*${COMPOSE_PROJECT_NAME}\$" /etc/hosts | $SED 's/[[:space:]]+/ /g' | $SED 's/#.*$//' | cut -d ' ' -f 2-)
@@ -674,6 +680,99 @@ case "$1" in
       start)
         start_devel_env
         devel_env_info
+      ;;
+
+      restart)
+        int_dev_restart_help()
+        {
+          echo "Usage: # modofu dev restart [options] [SERVICE...]" 1>&2
+          echo ""
+          echo "Options:" 1>&2
+          echo "    -t, --timeout TIMEOUT     Specify a shutdown timeout in seconds." 1>&2
+          echo "                              (default: 45)" 1>&2
+        }
+        shift 2
+        timeout_option="--timeout 45"
+        while :;
+        do
+          case $1 in
+
+            --help|-h)
+              int_dev_restart_help
+              exit 0
+            ;;
+
+            -t|--timeout)
+              timeout_option="--timeout $2"
+              shift
+            ;;
+
+            -t=?*|--timeout=?*)
+              timeout_option="--timeout ${1#*=}"
+            ;;
+
+            --)
+              shift
+              break
+            ;;
+
+            -?*)
+              echo "Command 'dev' with argument 'restart' does not support option '$1'" >&2
+              exit 1
+            ;;
+
+            *)
+              break;
+            ;;
+          esac
+          shift
+        done
+
+        services_requested="$@"
+        services_running=""
+        services_to_restart=""
+
+        provide_basic_informations
+
+        echo "I: Checking for running services/containers..." 1>&2
+        container_ids=$(docker-compose ps -q)
+
+        for container_id in $container_ids
+        do
+          if [ "$(docker ps -f id=$container_id -f status=running -q --no-trunc)" = "$container_id" ]; then
+            container_service_name="$(get_docker_compose_service_name_by_container_id $container_id)"
+            services_running="$services_running $container_service_name"
+          fi
+        done
+
+        if [ -z "$(echo $services_running)" ]; then
+          echo "E: No single service running right now - can not restart anything" 1>&2
+          exit 1
+        fi
+
+        if [ -z "$services_requested" ]; then
+          echo "I: No specific service(s) to restart given, restarting all running services..." 1>&2
+          services_to_restart=$services_running
+        else
+          for service_requested in $services_requested
+          do
+            for service_running in $services_running
+            do
+              if [ "$service_running" = "$service_requested" ]; then
+                services_to_restart="$services_to_restart $service_requested"
+                continue 2
+              fi
+            done
+            echo "W: Services '$service_requested' is not running - not trying to restart it" 1>&2
+          done
+        fi
+
+        if [ -z "$(echo $services_to_restart)" ]; then
+          echo "E: None of the services requested for restart is running." 1>&2
+          exit 1
+        fi
+
+        docker-compose restart $timeout_option $services_to_restart
       ;;
 
       exec)
