@@ -853,6 +853,7 @@ case "$1" in
         echo "    pull" 1>&2
         echo "    build" 1>&2
         echo "    start" 1>&2
+        echo "    restart" 1>&2
         echo "    exec" 1>&2
         echo "    stop" 1>&2
         echo "    clean-sync" 1>&2
