@@ -563,7 +563,7 @@ stop_devel_env()
   provide_basic_informations
   provide_domain_informations
 
-  if [ $NEED_DOCKER_SYNC -eq 0 ]; then
+  if [ $NEED_DOCKER_SYNC -eq 1 ]; then
     # Terminate docker-sync-watchdog (if needed)
     screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n" 1>/dev/null 2>/dev/null && sleep 5 || true
     screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X quit 1>/dev/null 2>/dev/null || true
