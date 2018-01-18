@@ -870,7 +870,12 @@ case "$1" in
 
   doc)
     case "$2" in
-      ''|read)
+      ''|read|edit)
+        local_edit_extra_options=""
+        if [ "$2" = "edit" ]; then
+          local_edit_extra_options="-v $(pwd)/docs:/usr/local/share/modofu/github-pages"
+        fi
+
         if [ "$OS" = "osx" ]; then
           # Bring up the MODOFU_LOCAL_DOCUMENTATION_IP
           echo "I: Adding modofu local documentation ip the loopback device. You might need to provide your password..." 1>&2
@@ -881,6 +886,7 @@ case "$1" in
           --rm \
           -it \
           -e GEM_PATH=/modofu-doc-server/ruby/2.3.0 \
+          $local_edit_extra_options \
           -p $MODOFU_LOCAL_DOCUMENTATION_IP:80:4000 \
           --workdir /usr/local/share/modofu/github-pages \
           modofu/modofu:stable \
@@ -895,6 +901,7 @@ case "$1" in
       --help|-h)
         echo "Command '$1' supports the following arguments:" 1>&2
         echo "    read" 1>&2
+        echo "    edit" 1>&2
       ;;
 
       *)
