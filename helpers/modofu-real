@@ -524,9 +524,8 @@ devel_env_info()
     echo -e "   - $port \t($docker_container_in_use)" 1>&2
   done
 
-  echo "I: For futher details use '# docker-compose ps'" 1>&2
-
   echo "" 1>&2
+  echo "I: Use '# $MODOFU_SCRIPT_NAME dev ps'   to get details about services" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev stop' to stop the app" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev info' to see this this summary again" 1>&2
 
@@ -614,6 +613,11 @@ case "$1" in
     case "$2" in
       info)
         devel_env_info
+      ;;
+
+      ps)
+        provide_basic_informations
+        docker-compose ps
       ;;
 
       pull)
@@ -848,6 +852,7 @@ case "$1" in
       ''|help|--help)
         echo "Command '$1' supports the following arguments:" 1>&2
         echo "    info" 1>&2
+        echo "    ps" 1>&2
         echo "    pull" 1>&2
         echo "    build" 1>&2
         echo "    start" 1>&2
