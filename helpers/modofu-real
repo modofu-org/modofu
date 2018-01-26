@@ -506,6 +506,11 @@ devel_env_info()
   echo "__________________________________________________________________________" 1>&2
   echo "" 1>&2
   echo "I: Your project uses the IP '$PROJECT_DEV_IP'" 1>&2
+  if [ -n "$ports_used_by_project" ]; then
+    echo "   and listens on port(s): $(echo $ports_used_by_project)" 1>&2
+  else
+    echo "   but does not listen on any ports on it !?!" 1>&2
+  fi
   if [ -z "$local_domain_names" ]; then
     echo "   Currently no names are pointing to the above mentioned IP." 1>&2
   else
@@ -514,15 +519,6 @@ devel_env_info()
       echo "   - $local_domain_name" 1>&2
     done
   fi
-
-  echo "I: The following ports are in use by your project:" 1>&2
-  for port in $ports_used_by_project; do
-    docker_container_in_use="$(docker-compose ps | grep -F "$PROJECT_DEV_IP:$port->" | cut -d ' ' -f 1)"
-    if [ -z "$docker_container_in_use" ]; then
-      docker_container_in_use="Container not running right now"
-    fi
-    echo -e "   - $port \t($docker_container_in_use)" 1>&2
-  done
 
   echo "" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev ps'   to get details about services" 1>&2
