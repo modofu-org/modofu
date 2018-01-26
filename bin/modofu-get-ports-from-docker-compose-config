@@ -25,7 +25,7 @@ ruby -rjson -ryaml -e "puts YAML.load_file('tmp/modofu/local-project/docker-comp
 docker_compose_file_version=$(cat /tmp/modofu/local-project/docker-compose.json | jq .version | sed -E 's/"//g')
 
 case "$docker_compose_file_version" in
-  2*)
+  2*|3|3.0|3.1)
     cat /tmp/modofu/local-project/docker-compose.json \
       | jq '.services[] | select(.ports != null) | .ports[]' \
       | cut -d ':' -f 2 \
