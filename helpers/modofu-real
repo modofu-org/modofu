@@ -178,10 +178,7 @@ provide_domain_informations()
 
 provide_ports_informations()
 {
-  ports_used_by_project=$(PROJECT_DEV_IP=$GENERIC_LOCAL_TEST_IP docker-compose config \
-                                                         | grep -F "$GENERIC_LOCAL_TEST_IP" \
-                                                         | cut -d ':' -f 2 \
-                                                         | sort -n -u)
+  ports_used_by_project=$(PROJECT_DEV_IP=$GENERIC_LOCAL_TEST_IP docker-compose config | docker run --rm -i modofu/modofu:stable modofu-get-ports-from-docker-compose-config)
 }
 
 deal_with_3rd_party_tools()

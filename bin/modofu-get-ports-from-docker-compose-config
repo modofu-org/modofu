@@ -1,0 +1,47 @@
+#!/bin/bash
+
+#########################
+# (c) MODOFU DEVELOPERS #
+###########################################################################
+# This program is free software; you can redistribute it and/or modify it #
+# under the terms of the GNU General Public License as published by the   #
+# Free Software Foundation; either version 2 of the License, or (at your  #
+# option) any later version.                                              #
+# A copy of the GNU General Public License version 2 is in file GPL-2.    #
+###########################################################################
+
+set -e
+set -o pipefail
+
+mkdir -p /tmp/modofu/local-project
+
+# Load in streamed output of 'docker-compose config'
+cat - > /tmp/modofu/local-project/docker-compose.yml
+
+# Convert yml to json
+ruby -rjson -ryaml -e "puts YAML.load_file('tmp/modofu/local-project/docker-compose.yml').to_json" > /tmp/modofu/local-project/docker-compose.json
+
+# Get docker-composer file version
+docker_compose_file_version=$(cat /tmp/modofu/local-project/docker-compose.json | jq .version | sed -E 's/"//g')
+
+case "$docker_compose_file_version" in
+  2*)
+    cat /tmp/modofu/local-project/docker-compose.json \
+      | jq '.services[] | select(.ports != null) | .ports[]' \
+      | cut -d ':' -f 2 \
+      | sed -E 's/[^0-9]//g' \
+      | sort -V -u
+  ;;
+
+  3*)
+    cat /tmp/modofu/local-project/docker-compose.json \
+      | jq '.services[] | select(.ports != null and .ports[].published != null) | .ports[].published' \
+      | sort -V -u \
+      | sed -E 's/"//g'
+  ;;
+
+  *)
+    echo "E: Docker Compose file version '$docker_compose_file_version' is not supported by modofu" 1>&2
+    exit 1
+  ;;
+esac
