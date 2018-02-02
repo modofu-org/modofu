@@ -573,9 +573,6 @@ clean_devel_sync()
     echo "I: docker-sync is not in use in this project, thus there is nothing to clean." 1>&2
   elif [ "$OS" = "osx" ]; then
     stop_devel_env
-    if [ "$1" = "remove" ]; then
-      remove_devel_env
-    fi
     echo "I: Cleaning docker-sync..." 1>&2
     docker-sync clean
   else
@@ -836,13 +833,13 @@ case "$1" in
       ;;
 
       clean-sync)
-        clean_devel_sync remove
+        clean_devel_sync
       ;;
 
       remove)
         stop_devel_env
         remove_devel_env
-        clean_devel_sync no-remove
+        clean_devel_sync
       ;;
 
       ''|help|--help)
