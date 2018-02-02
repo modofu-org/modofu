@@ -581,20 +581,6 @@ clean_devel_sync()
   fi
 }
 
-remove_devel_env()
-{
-  echo "I: Removing development environment..." 1>&2
-  provide_basic_informations
-  provide_domain_informations
-  docker-compose down -v
-  int_add_entries_to_etc_hosts $COMPOSE_PROJECT_NAME do_clean
-  if [ "$OS" = "osx" ]; then
-    # Remove IP alias for the project
-    echo "I: Removing local project IP on the loopback device. You might need to provide your password..." 1>&2
-    sudo ifconfig lo0 -alias $PROJECT_DEV_IP 255.0.0.0
-  fi
-}
-
 self_upgrade()
 {
   echo "I: Upgrading modofu..." 1>&2
@@ -837,9 +823,78 @@ case "$1" in
       ;;
 
       remove)
-        stop_devel_env
-        remove_devel_env
-        clean_devel_sync
+        int_dev_remove_help()
+        {
+          echo "Usage: # modofu dev remove [options] [SERVICE...]" 1>&2
+          echo ""
+          echo "Options:" 1>&2
+          echo "    --remove-orphans  Remove containers for services that are" 1>&2
+          echo "                      not (or no longer defined) for the project." 1>&2
+          echo "    --keep-volumes    Neither remove named nor anonymous volumes." 1>&2
+        }
+        shift 2
+        remove_volumes_option="-v"
+        remove_orphans_option=""
+        while :;
+        do
+          case $1 in
+
+            --help|-h)
+              int_dev_remove_help
+              exit 0
+            ;;
+
+            --remove-orphans)
+              remove_orphans_option="--remove-orphans"
+            ;;
+
+            --keep-volumes)
+              remove_volumes_option=""
+            ;;
+
+            --)
+              shift
+              break
+            ;;
+
+            -?*)
+              echo "Command 'dev' with argument 'remove' does not support option '$1'" 1>&2
+              exit 1
+            ;;
+
+            *)
+              break;
+            ;;
+          esac
+          shift
+        done
+
+        services_requested="$@"
+
+        if [ -n "$services_requested" ] && \
+           [ -n "$remove_orphans_option" ]; then
+          echo "W: Ignoring option '--remove-orphans', since at least one services to remove was defined." 1>&2
+          remove_orphans_option=""
+        fi
+
+        provide_basic_informations
+
+        if [ -n "$services_requested" ]; then
+          echo "I: Removing containers for services: $services_requested" 1>&2
+          docker-compose rm --stop --force $remove_volumes_option $services_requested
+        else
+          stop_devel_env
+          echo "I: Removing development environment..." 1>&2
+          provide_domain_informations
+          docker-compose down $remove_volumes_option $remove_orphans_option
+          int_add_entries_to_etc_hosts $COMPOSE_PROJECT_NAME do_clean
+          if [ "$OS" = "osx" ]; then
+            # Remove IP alias for the project
+            echo "I: Removing local project IP on the loopback device. You might need to provide your password..." 1>&2
+            sudo ifconfig lo0 -alias $PROJECT_DEV_IP 255.0.0.0
+          fi
+          clean_devel_sync
+        fi
       ;;
 
       ''|help|--help)
