@@ -589,7 +589,7 @@ remove_devel_env()
   echo "I: Removing development environment..." 1>&2
   provide_basic_informations
   provide_domain_informations
-  docker-compose down
+  docker-compose down -v
   int_add_entries_to_etc_hosts $COMPOSE_PROJECT_NAME do_clean
   if [ "$OS" = "osx" ]; then
     # Remove IP alias for the project
