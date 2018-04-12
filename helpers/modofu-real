@@ -999,7 +999,7 @@ case "$1" in
     fi
   ;;
 
-  ''|help)
+  ''|help|--help)
     echo "USAGE: $MODOFU_SCRIPT_NAME COMMAND [argument...]" 1>&2
     echo "Commands:" 1>&2
     echo "    help" 1>&2
