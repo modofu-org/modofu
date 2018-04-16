@@ -338,8 +338,20 @@ start_devel_env()
   for container_id in $container_ids
   do
     container_name="$(get_docker_container_name_by_container_id $container_id)"
-    echo "I: Processing container '$container_name' with id '$container_id'" 1>&2
+    no_project_prefix_container_name="$(echo $container_name | $SED 's/^'${COMPOSE_PROJECT_NAME}'_//')"
+    service_name="$(echo $no_project_prefix_container_name | $SED 's/_[0-9]+$//')"
 
+    if [ ! -d "./modofu/containers/$service_name/start.d" ] && \
+       [ ! -d "./modofu/containers/$no_project_prefix_container_name/start.d" ]; then
+      echo "I: Skipping container '$container_name' with id '$container_id', since" 1>&2
+      echo "    neither './modofu/containers/$service_name/start.d'" 1>&2
+      echo "    nor './modofu/containers/$no_project_prefix_container_name/start.d'" 1>&2
+      echo "    is present in the project" 1>&2
+      echo "" 1>&2
+      continue
+    fi
+
+    echo "I: Processing container '$container_name' with id '$container_id'" 1>&2
     # Test if we have sh in the container
     docker exec -i -u 0 $container_id /usr/bin/env sh -c "exit 0" && sh_present_in_container=1 || sh_present_in_container=0
     if [ $sh_present_in_container -ne 1 ]; then
@@ -347,9 +359,6 @@ start_devel_env()
       echo "   Will not try to run '/modofu/start.d/*' within this container." 1>&2
       continue
     fi
-
-    no_project_prefix_container_name="$(echo $container_name | $SED 's/^'${COMPOSE_PROJECT_NAME}'_//')"
-    service_name="$(echo $no_project_prefix_container_name | $SED 's/_[0-9]+$//')"
 
     echo "I: Running '/modofu/start.d/*' in container '$container_name'..." 1>&2
     if [ -d "./modofu/containers/$service_name/start.d" ]; then
