@@ -181,113 +181,6 @@ provide_ports_informations()
   ports_used_by_project=$(PROJECT_DEV_IP=$GENERIC_LOCAL_TEST_IP docker-compose config | docker run --rm -i modofu/modofu:stable modofu-get-ports-from-docker-compose-config)
 }
 
-deal_with_3rd_party_tools()
-{
-  local mode="$1"
-  if [ "$mode" != "auto_install" ]; then
-    mode="exit_with_error_if_missing"
-  fi
-
-  echo "I: Checking if all required 3rd-party tools are present on the local system..." 1>&2
-
-  if [ "$OS" = "osx" ] && \
-     [ $NEED_DOCKER_SYNC -eq 1 ]; then
-    echo "I: Checking for docker-sync related 3rd-party-tools, since a docker-sync.yml is used in the project" 1>&2
-
-    if ! [ -x "$(which brew)" ]; then
-      echo "W: Command brew (homebrew) not found." 1>&2
-      if [ "$mode" = "auto_install" ]; then
-        echo "I: Auto installing of brew is not supported. Please visit https://brew.sh/ for install instructions." 1>&2
-        exit 1
-      else
-        echo "E: Please install it manually. Install instruction can be found at: https://brew.sh/" 1>&2
-        exit 1
-      fi
-    fi
-
-    if ! [ -x "$(which socat)" ]; then
-      echo "W: Command socat not found" 1>&2
-      if [ "$mode" = "auto_install" ]; then
-        echo "I: Trying to install it. You might need to provide your password..." 1>&2
-        brew install socat
-        echo "I: Installed." 1>&2
-      else
-        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
-        exit 1
-      fi
-    fi
-
-    if ! [ -x "$(which screen)" ] || \
-         [ $(screen -v | grep -c -i GNU) -le 0 ]; then
-      echo "W: Command screen not found or not the GNU variant" 1>&2
-      if [ "$mode" = "auto_install" ]; then
-        echo "I: Trying to install it. You might need to provide your password..." 1>&2
-        brew install screen
-        echo "I: Installed." 1>&2
-      else
-        echo "E: Please install the GNU variant of screen manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
-        exit 1
-      fi
-    fi
-
-    if ! [ -x "$(which pstree)" ]; then
-      echo "W: Command pstree not found" 1>&2
-      if [ "$mode" = "auto_install" ]; then
-        echo "I: Trying to install it. You might need to provide your password..." 1>&2
-        brew install pstree
-        echo "I: Installed." 1>&2
-      else
-        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
-        exit 1
-      fi
-    fi
-
-    if ! [ -x "$(which unison)" ]; then
-      echo "W: Command unison not found" 1>&2
-      if [ "$mode" = "auto_install" ]; then
-        echo "I: Trying to install it. You might need to provide your password..." 1>&2
-        brew install unison
-        echo "I: Installed." 1>&2
-      else
-        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
-        exit 1
-      fi
-    fi
-
-    if ! [ -x "$(which unison-fsmonitor)" ]; then
-      echo "W: Command unison-fsmonitor not found" 1>&2
-      if [ "$mode" = "auto_install" ]; then
-        echo "I: Trying to install it. You might need to provide your password..." 1>&2
-        brew tap eugenmayer/dockersync && brew install eugenmayer/dockersync/unox
-        echo "I: Installed." 1>&2
-      else
-        echo "E: Please install it manually or use '# $MODOFU_SCRIPT_NAME auto-install-3rd-party-tools" 1>&2
-        exit 1
-      fi
-    fi
-
-    if ! [ -x "$(which docker-sync)" ]; then
-      echo "W: Command docker-sync not found." 1>&2
-      if [ "$mode" = "auto_install" ]; then
-        echo "I: Auto installing of docker-sync is not supported. Please visit http://docker-sync.io/ for install instructions." 1>&2
-        exit 1
-      else
-        echo "E: Please install it manually. Install instruction can be found at: http://docker-sync.io/" 1>&2
-        exit 1
-      fi
-    else
-      local docker_sync_working=1
-      docker-sync -v 1>/dev/null 2>&1 || docker_sync_working=0
-      if [ $docker_sync_working -ne 1 ]; then
-        echo "E: Your docker-sync installation is broken. Please ensure you can successfully run at least '# docker-sync -v'" 1>&2
-        exit 1
-      fi
-    fi
-  fi
-
-  echo "I: Done with checking if all required 3rd-party tools are present on the local system." 1>&2
-}
-
 start_devel_env()
 {
   echo "I: Starting development environment..." 1>&2
@@ -300,6 +193,13 @@ start_devel_env()
   fi
 
   if [ "$OS" = "osx" ]; then
+    ### Older versions of modofu used to run docker-sync in a screen - check if such a screen is around and terminate it
+    if [ -x "$(which screen)" ] && \
+       [ $(screen -v | grep -c -i GNU) -eq 1 ]; then
+      screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n" 1>/dev/null 2>/dev/null && sleep 10 || true
+      screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X quit 1>/dev/null 2>/dev/null || true
+    fi
+
     # Bring up the GENERIC_LOCAL_TEST_IP
     echo "I: Adding a generic local test ip on the loopback device. You might need to provide your password..." 1>&2
     sudo ifconfig lo0 alias $GENERIC_LOCAL_TEST_IP 255.0.0.0
@@ -321,92 +221,75 @@ start_devel_env()
   int_add_entries_to_etc_hosts "MODOFU-LOCAL-DOCKER-HOST" $LOCAL_DOCKER_HOST_IP "docker-host.local.modofu.test"
 
   provide_basic_informations
-  deal_with_3rd_party_tools exit_with_error_if_missing
 
   # Print out which ip we use
   echo "I: Will use '$PROJECT_DEV_IP' for project with name '$COMPOSE_PROJECT_NAME'" 1>&2
 
   if [ "$OS" = "osx" ]; then
-
-    if [ $NEED_DOCKER_SYNC -eq 1 ]; then
-      # Check if solely unison is used
-      if [ $(docker-sync list --verbose | grep strategy | $SED 's/[^[:space:]]+[[:space:]]+(.*)/\1/' | grep -c -v -E -e '^unison$') -gt 0 ]; then
-        echo "E: Currently only 'unison' is supported for docker-sync. Please ensure you use" 1>&2
-        echo "   sync_strategy: 'unison'" 1>&2
-        echo "   In your docker-sync.yml configuration file." 1>&2
-        exit 1
-      fi
-
-      echo "UNKNOWN" > /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status
-
-      # Store the docker-sync-watchdog on the local system for later execution
-      docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat /usr/local/share/modofu/modofu-docker-sync-watchdog-real' > /tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script
-      chmod 755 /tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script
-
-      # Open a new screen for docker-sync-watchdog (if needed)
-      if [ $(screen -ls docker-sync-watchdog.$COMPOSE_PROJECT_NAME | grep -c "\.docker-sync-watchdog.$COMPOSE_PROJECT_NAME[[:space:]]") -le 0 ]; then
-        echo "I: Opening a new screen docker-sync-watchdog.$COMPOSE_PROJECT_NAME" 1>&2
-        screen -s /bin/bash -dmS docker-sync-watchdog.$COMPOSE_PROJECT_NAME && sleep 1
-      fi
-
-      # Terminate a potentially running docker-sync-watchdog in that screen
-      screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n"
-
-      # Wait a bit
-      sleep 1
-
-      # Start the docker-sync-watchdog
-      screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"/tmp/modofu-docker-sync-watchdog-real.$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION.script $COMPOSE_PROJECT_NAME\n"
-
-      # Wait again a bit
-      sleep 1
-
-      echo "Waiting for docker-sync to get ready..." 1>&2
-      loop_protection=120
-      while [ $loop_protection -gt 0 ]
-      do
-        let loop_protection--
-        if [ ! -r "/tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status" ]; then
-          echo "E: File '/tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status' not present." 1>&2
-          echo "   The docker-sync-watchdog is most likely broken, please contact the modofu developers!" 1>&2
-          exit 1
-        fi
-
-        if [ $(cat /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status | grep -c "SYNCED") -eq 1 ]; then
-          break
-        elif [ $(cat /tmp/modofu-$COMPOSE_PROJECT_NAME-docker-sync.status | grep -c "ASKPASS") -eq 1 ]; then
-          echo "" 1>&2
-          read -s -p "Docker-Sync asks for your password, please provide it:" pw_for_docker_sync
-          screen -S docker-sync.$COMPOSE_PROJECT_NAME -X stuff $"$pw_for_docker_sync\n"
-          pw_for_docker_sync="iudfhgw98w54zhgoipaerzfw45hgera6f54gug86fsdfg"
-          unset pw_for_docker_sync
-          sleep 1
-          echo "" 1>&2
-        else
-          sleep 1
-        fi
-
-        echo -e -n "Waiting (${loop_protection}s)...                         \r" 1>&2
-      done
-      if [ $loop_protection -le 0 ]; then
-        echo "...FAILED                                                        " 1>&2
-        echo "E: Starting docker-sync took too long (or just failed)." 1>&2
-        echo "I: If you are familiar with screen, you might want to debug this:" 1>&2
-        echo "   - Check the output of docker-sync by entering the screen it is running in with:" 1>&2
-        echo "     # screen -r docker-sync.$COMPOSE_PROJECT_NAME" 1>&2
-        echo "   - Check the status of the docker-sync-watchdog by entering the screen it is running in with:" 1>&2
-        echo "     # screen -r docker-sync-watchdog.$COMPOSE_PROJECT_NAME" 1>&2
-        exit 1
-      else
-        echo "...OKAY                                                          " 1>&2
-      fi
-    fi
-
     echo "I: Adding local project IP on the loopback device. You might need to provide your password..." 1>&2
     sudo ifconfig lo0 alias $PROJECT_DEV_IP 255.0.0.0
   fi
 
   int_add_entries_to_etc_hosts $COMPOSE_PROJECT_NAME $PROJECT_DEV_IP "$PROJECT_DEV_DOMAINS"
+
+  if [ "$OS" = "osx" ] && \
+     [ $NEED_DOCKER_SYNC -eq 1 ]; then
+    echo "I: This projects makes use of docker-sync" 1>&2
+    if ! [ -x "$(which docker-sync)" ]; then
+      echo "W: Command docker-sync not found." 1>&2
+      echo "E: Please install it manually. Install instruction can be found at: http://docker-sync.io/" 1>&2
+      exit 1
+    else
+      local docker_sync_working=1
+      docker-sync -v 1>/dev/null 2>&1 || docker_sync_working=0
+      if [ $docker_sync_working -ne 1 ]; then
+        echo "E: Your docker-sync installation is broken. Please ensure you can successfully run at least '# docker-sync -v'" 1>&2
+        exit 1
+      fi
+    fi
+
+    if [ $(docker-sync list --verbose | grep sync_strategy | $SED 's/[^[:space:]]+[[:space:]]+(.*)/\1/' | grep -c -E -e '^unison$') -eq 1 ]; then
+      if ! [ -x "$(which unison)" ] ||
+         ! [ -x "$(which unison-fsmonitor)" ]; then
+        echo "E: Your docker-sync uses unison, but required tools on your mac are missing." 1>&2
+        echo "   Please visit http://docker-sync.io/ to get instruction how to setup your" 1>&2
+        echo "   mac for docker-sync with unison." 1>&2
+        exit 1
+      fi
+
+      docker_sync_max_inotify_watches=$(cat docker-sync.yml | grep '^[^#]*max_inotify_watches' | sed -E 's/[^0-9]//g')
+      if [ -n "$docker_sync_max_inotify_watches" ]; then
+        echo "I: 'max_inotify_watches: $docker_sync_max_inotify_watches' configured in docker-sync.yml" 1>&2
+        echo "   Checking and trying to increase the according kernel parameters, since docker-sync might not be able to do this in background mode..." 1>&2
+
+        docker_sync_current_max_files_per_proc=$(sysctl kern.maxfilesperproc | sed -E 's/[^0-9]//g')
+        if [ -n "$docker_sync_current_max_files_per_proc" ] && \
+           [ $docker_sync_current_max_files_per_proc -lt $docker_sync_max_inotify_watches ]; then
+          echo "I: Need to increase kern.maxfilesperproc from $docker_sync_current_max_files_per_proc to $docker_sync_max_inotify_watches - you might need to provide your password..." 1>&2
+          sudo sysctl -w kern.maxfilesperproc="$docker_sync_max_inotify_watches"
+        fi
+
+        docker_sync_current_max_files=$(sysctl kern.maxfiles | sed -E 's/[^0-9]//g')
+        if [ -n "$docker_sync_current_max_files" ] && \
+           [ $docker_sync_current_max_files -lt $docker_sync_max_inotify_watches ]; then
+          echo "I: Need to increase kern.maxfiles from $docker_sync_current_max_files to $docker_sync_max_inotify_watches - you might need to provide your password..." 1>&2
+          sudo sysctl -w kern.maxfiles="$docker_sync_max_inotify_watches"
+        fi
+      fi
+    fi
+
+    if [ ! -d "/tmp/modofu/docker-sync" ]; then
+      mkdir -p /tmp/modofu/docker-sync
+    fi
+
+    echo "I: Stopping possibly running docker-sync..." 1>&2
+    docker-sync stop --dir=/tmp/modofu/docker-sync --name=docker-sync-managed-by-modofu-for-$COMPOSE_PROJECT_NAME 2>/dev/null || true
+
+    echo "I: Starting docker-sync. This can take a long time (even with no output)," 1>&2
+    echo "   especially if a lot of files have to be synced from the mac towards docker." 1>&2
+    sleep 2
+    docker-sync start --dir=/tmp/modofu/docker-sync --name=docker-sync-managed-by-modofu-for-$COMPOSE_PROJECT_NAME
+  fi
 
   provide_domain_informations
 
@@ -527,8 +410,8 @@ devel_env_info()
 
   if [ $NEED_DOCKER_SYNC -eq 1 ]; then
     echo "" 1>&2
-    echo "I: If you are interested in the output of docker-sync, enter it's screen with:" 1>&2
-    echo "   # screen -r docker-sync.$COMPOSE_PROJECT_NAME" 1>&2
+    echo "I: If you are interested in the output of docker-sync, use:" 1>&2
+    echo "   # modofu sync log" 1>&2
   fi
 
 }
@@ -557,9 +440,7 @@ stop_devel_env()
   provide_domain_informations
 
   if [ $NEED_DOCKER_SYNC -eq 1 ]; then
-    # Terminate docker-sync-watchdog (if needed)
-    screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X stuff $"^c\n" 1>/dev/null 2>/dev/null && sleep 5 || true
-    screen -S docker-sync-watchdog.$COMPOSE_PROJECT_NAME -X quit 1>/dev/null 2>/dev/null || true
+    docker-sync stop --dir=/tmp/modofu/docker-sync --name=docker-sync-managed-by-modofu-for-$COMPOSE_PROJECT_NAME || true
   fi
 
   docker-compose stop
@@ -819,7 +700,9 @@ case "$1" in
       ;;
 
       clean-sync)
-        clean_devel_sync
+        echo "E: '# modofu dev clean-sync' has been superseeded by" 1>&2
+        echo "   '# modofu sync clean" 1>&2
+        exit 1
       ;;
 
       remove)
@@ -891,7 +774,7 @@ case "$1" in
           if [ "$OS" = "osx" ]; then
             # Remove IP alias for the project
             echo "I: Removing local project IP on the loopback device. You might need to provide your password..." 1>&2
-            sudo ifconfig lo0 -alias $PROJECT_DEV_IP 255.0.0.0
+            sudo ifconfig lo0 -alias $PROJECT_DEV_IP 255.0.0.0 || true
           fi
           clean_devel_sync
         fi
@@ -961,12 +844,110 @@ case "$1" in
     esac
   ;;
 
+  sync)
+    case "$2" in
+      log)
+        int_sync_log_help()
+        {
+          echo "Usage: # modofu sync log [options]" 1>&2
+          echo ""
+          echo "Options:" 1>&2
+          echo "    -f|--follow    Specify if the logs should be streamed" 1>&2
+          echo "    --lines=NUM    Specify number of lines to tail" 1>&2
+        }
+        shift 2
+        run_as_user_option=""
+        while :;
+        do
+          case $1 in
+
+            --help|-h)
+              int_sync_log_help
+              exit 0
+            ;;
+
+            -f|--follow)
+              follow_option="--follow"
+            ;;
+
+            --lines)
+              lines_option="--lines=$2"
+              shift
+            ;;
+
+            --lines=?*)
+              run_as_user_option="--lines=${1#*=}"
+            ;;
+
+            --)
+              shift
+              break
+            ;;
+
+            -?*)
+              echo "Command 'dev' with argument 'exec' does not support option '$1'" >&2
+              exit 1
+            ;;
+
+            *)
+              break;
+            ;;
+          esac
+          shift
+        done
+
+        if [ $NEED_DOCKER_SYNC -eq 0 ]; then
+          echo "I: Your project is not making use of docker-sync or it is not needed on your system." 1>&2
+        else
+          provide_basic_informations
+          docker-sync log --dir=/tmp/modofu/docker-sync --name=docker-sync-managed-by-modofu-for-$COMPOSE_PROJECT_NAME $follow_option $lines_option
+        fi
+      ;;
+
+      start)
+        if [ $NEED_DOCKER_SYNC -eq 0 ]; then
+          echo "I: Your project is not making use of docker-sync or it is not needed on your system." 1>&2
+        else
+          provide_basic_informations
+          docker-sync start --dir=/tmp/modofu/docker-sync --name=docker-sync-managed-by-modofu-for-$COMPOSE_PROJECT_NAME
+        fi
+      ;;
+
+      stop)
+        if [ $NEED_DOCKER_SYNC -eq 0 ]; then
+          echo "I: Your project is not making use of docker-sync or it is not needed on your system." 1>&2
+        else
+          provide_basic_informations
+          docker-sync stop --dir=/tmp/modofu/docker-sync --name=docker-sync-managed-by-modofu-for-$COMPOSE_PROJECT_NAME
+        fi
+      ;;
+
+      clean)
+        clean_devel_sync
+      ;;
+
+      ''|--help|-h)
+        echo "Command '$1' supports the following arguments:" 1>&2
+        echo "    log" 1>&2
+        echo "    start" 1>&2
+        echo "    stop" 1>&2
+        echo "    clean" 1>&2
+      ;;
+
+      *)
+        echo "E: Command '$1' does not support argument '$2'" 1>&2
+        exit 1
+      ;;
+    esac
+  ;;
+
   self-upgrade)
     self_upgrade
   ;;
 
   auto-install-3rd-party-tools)
-    deal_with_3rd_party_tools auto_install
+    echo "Command '$1' is deprecated and has no longer any effect," 1>&2
+    exit 1
   ;;
 
   license)
@@ -1005,8 +986,8 @@ case "$1" in
     echo "    help" 1>&2
     echo "    doc" 1>&2
     echo "    dev" 1>&2
+    echo "    sync" 1>&2
     echo "    self-upgrade" 1>&2
-    echo "    auto-install-3rd-party-tools" 1>&2
     echo "    license" 1>&2
   ;;
 
