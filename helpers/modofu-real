@@ -368,7 +368,7 @@ start_devel_env()
       docker cp ./modofu/containers/$service_name/start.d $container_id:/modofu/
     else
       echo "I: Directory './modofu/containers/$service_name/start.d' does not exists," 2>&1
-      echo "   NOT coping anything to '$container_name:/modofu/start.d/'" 1>&2
+      echo "   NOT copying anything to '$container_name:/modofu/start.d/'" 1>&2
     fi
 
     if [ -d "./modofu/containers/$no_project_prefix_container_name/start.d" ]; then
@@ -378,7 +378,7 @@ start_devel_env()
       docker cp ./modofu/containers/$no_project_prefix_container_name/start.d $container_id:/modofu/
     else
       echo "I: Directory './modofu/containers/$container_name/start.d' does not exists," 1>&2
-      echo "   NOT coping anything to '$container_name:/modofu/start.d/'" 1>&2
+      echo "   NOT copying anything to '$container_name:/modofu/start.d/'" 1>&2
     fi
 
     docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script $container_id:/tmp/modofu-run-start-d-in-container
