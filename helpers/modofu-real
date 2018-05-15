@@ -382,7 +382,7 @@ start_devel_env()
     fi
 
     docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script $container_id:/tmp/modofu-run-start-d-in-container
-    docker exec -u 0 $container_id chmod 700 /tmp/modofu-run-start-d-in-container
+    docker exec -u 0 $container_id chmod 0777 /tmp/modofu-run-start-d-in-container
     docker exec -it -u 0 $container_id /tmp/modofu-run-start-d-in-container
     docker exec -u 0 $container_id rm -f /tmp/modofu-run-start-d-in-container
     echo "I: Finished running '/modofu/start.d/*' in container '$container_name'..." 1>&2
