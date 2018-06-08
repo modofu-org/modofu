@@ -430,7 +430,7 @@ pull_devel_env()
   echo "I: Pulling fresh images for development environment..." 1>&2
   provide_basic_informations
 
-  docker-compose pull
+  docker-compose pull --ignore-pull-failures
 }
 
 
