@@ -249,8 +249,7 @@ start_devel_env()
     fi
 
     if [ $(docker-sync list --verbose | grep sync_strategy | $SED 's/[^[:space:]]+[[:space:]]+(.*)/\1/' | grep -c -E -e '^unison$') -eq 1 ]; then
-      if ! [ -x "$(which unison)" ] ||
-         ! [ -x "$(which unison-fsmonitor)" ]; then
+      if ! [ -x "$(which unison)" ]; then
         echo "E: Your docker-sync uses unison, but required tools on your mac are missing." 1>&2
         echo "   Please visit http://docker-sync.io/ to get instruction how to setup your" 1>&2
         echo "   mac for docker-sync with unison." 1>&2
