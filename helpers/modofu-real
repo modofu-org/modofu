@@ -336,17 +336,17 @@ start_devel_env()
   docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-start-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script
   for container_id in $container_ids
   do
-    container_name="$(get_docker_container_name_by_container_id $container_id)"
-    no_project_prefix_container_name="$(echo $container_name | $SED 's/^'${COMPOSE_PROJECT_NAME}'_//')"
-    service_name="$(echo $no_project_prefix_container_name | $SED 's/_[0-9]+$//')"
+    service_name="$(get_docker_compose_service_name_by_container_id $container_id)"
 
     if [ ! -d "./modofu/containers/$service_name/start.d" ]; then
-      echo "I: Skipping container '$container_name' with id '$container_id', since" 1>&2
-      echo "    './modofu/containers/$service_name/start.d'" 1>&2
+      echo "I: Skipping service '$service_name' for container with id '$container_id', since" 1>&2
+      echo "    './modofu/containers/$service_name/start.d/'" 1>&2
       echo "    is not present in the project" 1>&2
       echo "" 1>&2
       continue
     fi
+
+    container_name="$(get_docker_container_name_by_container_id $container_id)"
 
     echo "I: Processing container '$container_name' with id '$container_id'" 1>&2
     # Test if we have sh in the container
@@ -364,7 +364,7 @@ start_devel_env()
       docker exec $container_id mkdir /modofu 2>/dev/null || true
       docker cp ./modofu/containers/$service_name/start.d $container_id:/modofu/
     else
-      echo "I: Directory './modofu/containers/$service_name/start.d' does not exists," 2>&1
+      echo "I: Directory './modofu/containers/$service_name/start.d' does not exists," 1>&2
       echo "   NOT copying anything to '$container_name:/modofu/start.d/'" 1>&2
     fi
 
