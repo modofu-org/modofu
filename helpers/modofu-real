@@ -340,12 +340,10 @@ start_devel_env()
     no_project_prefix_container_name="$(echo $container_name | $SED 's/^'${COMPOSE_PROJECT_NAME}'_//')"
     service_name="$(echo $no_project_prefix_container_name | $SED 's/_[0-9]+$//')"
 
-    if [ ! -d "./modofu/containers/$service_name/start.d" ] && \
-       [ ! -d "./modofu/containers/$no_project_prefix_container_name/start.d" ]; then
+    if [ ! -d "./modofu/containers/$service_name/start.d" ]; then
       echo "I: Skipping container '$container_name' with id '$container_id', since" 1>&2
-      echo "    neither './modofu/containers/$service_name/start.d'" 1>&2
-      echo "    nor './modofu/containers/$no_project_prefix_container_name/start.d'" 1>&2
-      echo "    is present in the project" 1>&2
+      echo "    './modofu/containers/$service_name/start.d'" 1>&2
+      echo "    is not present in the project" 1>&2
       echo "" 1>&2
       continue
     fi
@@ -367,16 +365,6 @@ start_devel_env()
       docker cp ./modofu/containers/$service_name/start.d $container_id:/modofu/
     else
       echo "I: Directory './modofu/containers/$service_name/start.d' does not exists," 2>&1
-      echo "   NOT copying anything to '$container_name:/modofu/start.d/'" 1>&2
-    fi
-
-    if [ -d "./modofu/containers/$no_project_prefix_container_name/start.d" ]; then
-      echo "I: Copying contents in './modofu/containers/$no_project_prefix_container_name/start.d'" 1>&2
-      echo "   to '$container_name:/modofu/start.d/'" 1>&2
-      docker exec $container_id mkdir /modofu 2>/dev/null || true
-      docker cp ./modofu/containers/$no_project_prefix_container_name/start.d $container_id:/modofu/
-    else
-      echo "I: Directory './modofu/containers/$container_name/start.d' does not exists," 1>&2
       echo "   NOT copying anything to '$container_name:/modofu/start.d/'" 1>&2
     fi
 
