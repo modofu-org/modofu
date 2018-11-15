@@ -17,7 +17,7 @@ modofu_run_start_d_in_container()
   local MODOFU_EXEC_EXIT_CODE=0
   echo -n "I: Checking if '$MODOFU_EXEC_DIR' is in the container..." 1>&2
   if [ -d "$MODOFU_EXEC_DIR" ]; then
-    echo "Yes, checking for executables to run.." 1>&2
+    echo "Yes, checking for executables to run..." 1>&2
     for MODOFU_EXEC in ${MODOFU_EXEC_DIR}/*; do
       if [ ! -e "${MODOFU_EXEC}" ]; then
         echo "W: Nothing to execute in '$MODOFU_EXEC_DIR' found." 1>&2
