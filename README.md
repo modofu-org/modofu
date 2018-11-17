@@ -1,7 +1,7 @@
 modofu
 ======
 
-modofu is indented to make your work with docker a bit easier.
+modofu is intended to make your work with docker a bit easier.
 
 INSTALL
 -------
