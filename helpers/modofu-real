@@ -490,10 +490,12 @@ case "$1" in
           echo "    --force-rm       Always remove intermediate containers." 1>&2
           echo "    --no-cache       Do not use cache when building the image." 1>&2
           echo "    --no-pull        Do not refresh intermediate images." 1>&2
+          echo "    --parallel       Build images in parallel." 1>&2
         }
         force_rm_option=""
         no_cache_option=""
         pull_option="--pull"
+        parallel_option=""
         shift 2
         while :;
         do
@@ -516,6 +518,10 @@ case "$1" in
               pull_option=""
             ;;
 
+            --parallel)
+              parallel_option="--parallel"
+            ;;
+
             --)
               shift
               break
@@ -533,7 +539,7 @@ case "$1" in
           shift
         done
 
-        build_devel_env $force_rm_option $no_cache_option $pull_option "$@"
+        build_devel_env $force_rm_option $no_cache_option $pull_option $parallel_option "$@"
       ;;
 
       start)
