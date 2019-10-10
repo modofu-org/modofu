@@ -417,7 +417,7 @@ pull_devel_env()
   echo "I: Pulling fresh images for development environment..." 1>&2
   provide_basic_informations
 
-  docker-compose pull --ignore-pull-failures
+  docker-compose pull --ignore-pull-failures "$@"
 }
 
 
@@ -477,7 +477,8 @@ case "$1" in
       ;;
 
       pull)
-        pull_devel_env
+        shift 2
+        pull_devel_env "$@"
       ;;
 
       build)
