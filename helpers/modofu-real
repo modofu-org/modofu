@@ -329,6 +329,13 @@ start_devel_env()
     fi
   done
 
+  if [ $1 = true ] ; then
+    run_startup_scripts
+  fi
+}
+
+run_startup_scripts()
+{
   # Run start.d in each container
   echo "" 1>&2
   echo "I: Running '/modofu/start.d/*' within each container..." 1>&2
@@ -543,7 +550,24 @@ case "$1" in
       ;;
 
       start)
-        start_devel_env
+        load_scripts=true
+        shift 2
+        while :;
+        do
+          case $1 in
+
+            --no-scripts)
+              load_scripts=false
+            ;;
+
+            *)
+              break;
+            ;;
+          esac
+          shift
+        done
+
+        start_devel_env $load_scripts
         devel_env_info
       ;;
 
