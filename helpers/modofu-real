@@ -550,11 +550,23 @@ case "$1" in
       ;;
 
       start)
+        int_dev_start_help()
+        {
+          echo "Usage: # modofu dev start [options]" 1>&2
+          echo ""
+          echo "Options:" 1>&2
+          echo "    --no-scripts  Do not run scripts in start.d" 1>&2
+        }
         load_scripts=true
         shift 2
         while :;
         do
           case $1 in
+
+            --help|-h)
+              int_dev_start_help
+              exit 0
+            ;;
 
             --no-scripts)
               load_scripts=false
