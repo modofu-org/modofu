@@ -137,8 +137,11 @@ provide_basic_informations()
   else
     export COMPOSE_FILE="docker-compose.yml${COMPOSE_PATH_SEPARATOR}docker-compose-dev.yml"
   fi
-
-  export COMPOSE_FILE="${COMPOSE_FILE}${COMPOSE_PATH_SEPARATOR}docker-compose-dev-${OS}.yml"
+  
+  if [ -f "docker-compose-dev-${OS}.yml" ]; then
+    echo "I: Taking OS specific docker-compose file 'docker-compose-dev-${OS}.yml' into account..." 1>&2
+    export COMPOSE_FILE="${COMPOSE_FILE}${COMPOSE_PATH_SEPARATOR}docker-compose-dev-${OS}.yml"
+  fi
 }
 
 int_add_entries_to_etc_hosts()
