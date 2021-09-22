@@ -19,34 +19,15 @@ mkdir -p /tmp/modofu/local-project
 cat - > /tmp/modofu/local-project/docker-compose.yml
 
 # Convert yml to json
-ruby -rjson -ryaml -e "puts YAML.load_file('tmp/modofu/local-project/docker-compose.yml').to_json" > /tmp/modofu/local-project/docker-compose.json
+ruby -rjson -ryaml -e "puts YAML.load_file('/tmp/modofu/local-project/docker-compose.yml').to_json" > /tmp/modofu/local-project/docker-compose.json
 
-# Get docker-composer file version
-docker_compose_file_version=$(cat /tmp/modofu/local-project/docker-compose.json | jq .version | sed -E 's/"//g')
 
-# docker-compose 1.21.0 switched back to the pre 3.2 format for ports without changing the compose file version - try to detect that...
-if [ $(cat /tmp/modofu/local-project/docker-compose.yml | grep ports: -A 3 | grep -c published:) -eq 0 ]; then
-  docker_compose_file_version=3.1
-fi
-
-case "$docker_compose_file_version" in
-  2*|3|3.0|3.1)
-    cat /tmp/modofu/local-project/docker-compose.json \
-      | jq '.services[] | select(.ports != null) | .ports[]' \
-      | cut -d ':' -f 2 \
-      | sed -E 's/[^0-9]//g' \
-      | sort -V -u
-  ;;
-
-  3*)
-    cat /tmp/modofu/local-project/docker-compose.json \
-      | jq '.services[] | select(.ports != null and .ports[].published != null) | .ports[].published' \
-      | sort -V -u \
-      | sed -E 's/"//g'
-  ;;
-
-  *)
-    echo "E: Docker Compose file version '$docker_compose_file_version' is not supported by modofu" 1>&2
-    exit 1
-  ;;
-esac
+for line in $(cat /tmp/modofu/local-project/docker-compose.json | jq '.services[] | select(.ports != null) | .ports[] | if type=="object" then (.published | tostring | . + ":0") else . end' | sort -V -u)
+do
+  colon_count=$(echo -n "$line" | sed -E 's/[^:]//g' | wc -c)
+  case "$colon_count" in
+    1|2)
+      echo $line | cut -d ':' --only-delimited -f $colon_count | sed -E 's/[^0-9]//g'
+    ;;
+  esac
+done
