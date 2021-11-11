@@ -80,6 +80,21 @@ provide_basic_informations()
   fi
 
   source .env
+
+  if [ -r .modofu-env ]; then
+    source .modofu-env
+  else
+    echo "I: Not using non-exiting or unreadable file '.modofu-env'" 1>&2
+    echo "   You could use this file to override '.env' explicitly for modofu." 1>&2
+  fi
+
+  if [ -r .modofu-env.local ]; then
+    source .modofu-env.local
+  else
+    echo "I: Not using non-exiting or unreadable file '.modofu-env.local'" 1>&2
+    echo "   You could use this file to locally override '.modofu-env', but it should not be committed to VCS (e.g. git)." 1>&2
+  fi
+
   if [ -z "$COMPOSE_PROJECT_NAME" ]; then
     echo "E: You need to define variable 'COMPOSE_PROJECT_NAME' in the projects '.env' file, containing the" 1>&2
     echo "   name of the project." 1>&2
@@ -137,7 +152,7 @@ provide_basic_informations()
   else
     export COMPOSE_FILE="docker-compose.yml${COMPOSE_PATH_SEPARATOR}docker-compose-dev.yml"
   fi
-  
+
   if [ -f "docker-compose-dev-${OS}.yml" ]; then
     echo "I: Taking OS specific docker-compose file 'docker-compose-dev-${OS}.yml' into account..." 1>&2
     export COMPOSE_FILE="${COMPOSE_FILE}${COMPOSE_PATH_SEPARATOR}docker-compose-dev-${OS}.yml"
