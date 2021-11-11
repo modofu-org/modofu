@@ -884,9 +884,9 @@ case "$1" in
           -e GEM_PATH=/modofu-doc-server/ruby/2.3.0 \
           $local_edit_extra_options \
           -p $MODOFU_LOCAL_DOCUMENTATION_IP:80:4000 \
-          --workdir /usr/local/share/modofu/github-pages \
+          --workdir /usr/local/share/modofu/doc-server \
           modofu/modofu:stable \
-          /modofu-doc-server/ruby/2.3.0/bin/jekyll serve --host 0.0.0.0
+          bundle exec jekyll serve --host 0.0.0.0 --source /usr/local/share/modofu/github-pages
         if [ "$OS" = "osx" ]; then
           # Bring down the MODOFU_LOCAL_DOCUMENTATION_IP
           echo "I: Removing modofu local documentation ip the loopback device. You might need to provide your password..." 1>&2

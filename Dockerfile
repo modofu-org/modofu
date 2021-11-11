@@ -8,22 +8,27 @@
 # A copy of the GNU General Public License version 2 is in file GPL-2.    #
 ###########################################################################
 
-FROM debian:stretch as doc-server
+FROM debian:bullseye as doc-server
 
 # Build the documentation-server
 ADD docs/Gemfile* /usr/local/share/modofu/doc-server/
 RUN apt-get update \
  && apt-get -y --no-install-recommends install \
       build-essential \
-      ruby2.3 \
-      ruby2.3-dev \
+      ruby \
+      ruby-dev \
       ruby-bundler \
       zlib1g-dev \
- && cd /usr/local/share/modofu/doc-server \
- && bundle install --path=/modofu-doc-server \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* \
+ && echo "OK: Dependencies to build the documentation server have been installed"
+
+RUN cd /usr/local/share/modofu/doc-server \
+ && bundle config set --local path '/usr/local/share/modofu/doc-server' \
+ && bundle install \
  && echo "OK: Documentation server has been build successfully"
 
-FROM debian:stretch
+FROM debian:bullseye
 MAINTAINER YMC IT-Operations <it-operations@ymc.ch>
 
 ARG MODOFU_DOCKER_IMAGE
@@ -34,14 +39,14 @@ RUN apt-get update \
  && apt-get -y --no-install-recommends install \
       bc \
       jq \
-      ruby2.3 \
+      ruby \
       ruby-bundler \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && echo "OK"
 
 # Add the documentation-server
-COPY --from=doc-server /modofu-doc-server /modofu-doc-server
+COPY --from=doc-server /usr/local/share/modofu/doc-server /usr/local/share/modofu/doc-server
 
 # Add the documentation
 ADD docs /usr/local/share/modofu/github-pages
