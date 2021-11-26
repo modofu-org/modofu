@@ -84,15 +84,13 @@ provide_basic_informations()
   if [ -r .modofu-env ]; then
     source .modofu-env
   else
-    echo "I: Not using non-exiting or unreadable file '.modofu-env'" 1>&2
-    echo "   You could use this file to override '.env' explicitly for modofu." 1>&2
+    echo "I: No '.modofu-env' override found - skipping" 1>&2
   fi
 
   if [ -r .modofu-env.local ]; then
     source .modofu-env.local
   else
-    echo "I: Not using non-exiting or unreadable file '.modofu-env.local'" 1>&2
-    echo "   You could use this file to locally override '.modofu-env', but it should not be committed to VCS (e.g. git)." 1>&2
+    echo "I: No '.modofu-env.local' override found - skipping" 1>&2
   fi
 
   if [ -z "$COMPOSE_PROJECT_NAME" ]; then
