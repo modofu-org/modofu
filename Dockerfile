@@ -38,6 +38,7 @@ ENV MODOFU_DOCKER_IMAGE $MODOFU_DOCKER_IMAGE
 RUN apt-get update \
  && apt-get -y --no-install-recommends install \
       bc \
+      ipcalc \
       jq \
       ruby \
       ruby-bundler \

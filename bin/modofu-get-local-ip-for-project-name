@@ -38,6 +38,16 @@ if [ "$1" != "$COMPOSE_PROJECT_NAME" ]; then
   exit 1
 fi
 
+if [ -z "$MODOFU_DEV_IP_RANGE_HOST_MIN" ]; then
+  echo "E: Environment variable '\$MODOFU_DEV_IP_RANGE_HOST_MIN' is missing" 1>&2
+  exit 1
+fi
+
+if [ -z "$MODOFU_DEV_IP_RANGE_HOST_MAX" ]; then
+  echo "E: Environment variable '\$MODOFU_DEV_IP_RANGE_HOST_MAX' is missing" 1>&2
+  exit 1
+fi
+
 hosts_file="/etc/hosts"
 
 if [ -z "$COMPOSE_PROJECT_NAME" ]; then
@@ -70,19 +80,19 @@ dec2ip()
 # Try to get an existing IP from $hosts_file
 PROJECT_IP=$(grep -E -e "^127(\.[0-9]{1,3}){3}[[:space:]].+[[:space:]]###AUTOMATICALLY ADDED FOR ${COMPOSE_PROJECT_NAME}\$" $hosts_file | $SED 's/^([^[:space:]]+).*/\1/' | head -1)
 
-# If $PROJECT_IP is empty, get the next available IP in network 127.177.0.0/16
+# If $PROJECT_IP is empty, get the next available IP between (including) $MODOFU_DEV_IP_RANGE_HOST_MIN and $MODOFU_DEV_IP_RANGE_HOST_MAX
 if [ -z "$PROJECT_IP" ]; then
-  test_dec_ip=$(ip2dec "127.177.0.0")
-  end_dec_ip=$(ip2dec "127.177.255.254")
+  test_dec_ip=$(ip2dec "$MODOFU_DEV_IP_RANGE_HOST_MIN")
+  end_dec_ip=$(ip2dec "$MODOFU_DEV_IP_RANGE_HOST_MAX")
 
-  used_ips=$(cat $hosts_file | grep -E -e "^127\.177(\.[0-9]{1,3}){2}[[:space:]]" | $SED 's/^([^[:space:]]+).*/\1/')
-  while [ $test_dec_ip -lt $end_dec_ip ]
+  used_ips=$(cat $hosts_file | grep -F "###AUTOMATICALLY ADDED FOR" | $SED 's/^([^[:space:]]+).*/\1/')
+  while [ $test_dec_ip -le $end_dec_ip ]
   do
-    ((test_dec_ip++))
     for used_ip in $used_ips
     do
       used_ip_dec=$(ip2dec $used_ip)
       if [ $used_ip_dec -eq $test_dec_ip ]; then
+        ((test_dec_ip++))
         continue 2
       fi
     done
@@ -92,5 +102,3 @@ if [ -z "$PROJECT_IP" ]; then
 fi
 
 echo "$PROJECT_IP"
-
-

@@ -23,6 +23,7 @@ fi
 GENERIC_LOCAL_TEST_IP="127.254.253.251"
 LOCAL_DOCKER_HOST_IP="203.0.113.177"
 MODOFU_LOCAL_DOCUMENTATION_IP="127.254.253.252"
+MODOFU_DEFAULT_DEV_IP_RANGE="127.177.0.0/16"
 
 OS="$(uname)"
 case "$OS" in
@@ -120,6 +121,22 @@ provide_basic_informations()
     export PROJECT_DEV_DOMAINS="$PROJECT_DEV_DOMAINS"
   fi
 
+  if [ -n "$MODOFU_DEV_IP_RANGE" ]; then
+    # Wash quotes out of PROJECT_DEV_IP #SEE e.g.: https://github.com/docker/compose/issues/3702
+    export MODOFU_DEV_IP_RANGE="$MODOFU_DEV_IP_RANGE"
+  else
+    export MODOFU_DEV_IP_RANGE=$MODOFU_DEFAULT_DEV_IP_RANGE
+  fi
+  TEMP_MODOFU_IPCALC_OUTPUT="$(modofu_cmd_ipcalc --nocolor --nobinary $MODOFU_DEV_IP_RANGE)"
+  if [ "$(echo "$TEMP_MODOFU_IPCALC_OUTPUT" | grep Network | cut -s -d ':' -f 2 | sed -E 's/[[:space:]]+//g')" != "$MODOFU_DEV_IP_RANGE" ]; then
+    echo "E: The network '$MODOFU_DEV_IP_RANGE' provided via environment variable '\$MODOFU_DEV_IP_RANGE' is invalid"
+    exit 1
+  fi
+
+  export MODOFU_DEV_IP_RANGE_HOST_MIN=$(echo "$TEMP_MODOFU_IPCALC_OUTPUT" | grep HostMin | cut -s -d ':' -f 2 | sed -E 's/[[:space:]]+//g')
+  export MODOFU_DEV_IP_RANGE_HOST_MAX=$(echo "$TEMP_MODOFU_IPCALC_OUTPUT" | grep HostMax | cut -s -d ':' -f 2 | sed -E 's/[[:space:]]+//g')
+  unset TEMP_MODOFU_IPCALC_OUTPUT
+
   if [ -n "$PROJECT_DEV_IP" ]; then
     # Wash quotes out of PROJECT_DEV_IP #SEE e.g.: https://github.com/docker/compose/issues/3702
     export PROJECT_DEV_IP="$PROJECT_DEV_IP"
@@ -130,7 +147,7 @@ provide_basic_informations()
       chmod 755 /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-get-local-ip-for-project-name.script
       export PROJECT_DEV_IP=$(/tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-get-local-ip-for-project-name.script "$COMPOSE_PROJECT_NAME")
     elif [ "$OS" = "linux" ]; then
-      export PROJECT_DEV_IP=$(docker run --rm -v /etc/hosts:/etc_host_file.from_docker_host:ro $MODOFU_DOCKER_IMAGE modofu-get-local-ip-for-project-name "$COMPOSE_PROJECT_NAME")
+      export PROJECT_DEV_IP=$(docker run --rm --env MODOFU_DEV_IP_RANGE_HOST_MIN=$MODOFU_DEV_IP_RANGE_HOST_MIN --env MODOFU_DEV_IP_RANGE_HOST_MAX=$MODOFU_DEV_IP_RANGE_HOST_MAX -v /etc/hosts:/etc_host_file.from_docker_host:ro $MODOFU_DOCKER_IMAGE modofu-get-local-ip-for-project-name "$COMPOSE_PROJECT_NAME")
     else
       echo "E: Can not get local IP to run on, since OS '$OS' is not supported" 1>&2
       return 1
@@ -195,6 +212,11 @@ provide_domain_informations()
 provide_ports_informations()
 {
   ports_used_by_project=$(PROJECT_DEV_IP=$GENERIC_LOCAL_TEST_IP docker-compose config | docker run --rm -i modofu/modofu:stable modofu-get-ports-from-docker-compose-config)
+}
+
+modofu_cmd_ipcalc()
+{
+  docker run --rm $MODOFU_DOCKER_IMAGE ipcalc "$@"
 }
 
 start_devel_env()
