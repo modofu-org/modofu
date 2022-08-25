@@ -1034,10 +1034,10 @@ case "$1" in
 
     if [ "$OS" = "osx" ]; then
       echo "I: Removing the generic local test ip on the loopback device. You might need to provide your password..." 1>&2
-      sudo ifconfig lo0 alias $GENERIC_LOCAL_TEST_IP 255.0.0.0
+      sudo ifconfig lo0 delete $GENERIC_LOCAL_TEST_IP 255.0.0.0
 
       echo "I: Removing the local ip on the loopback device, where the docker host was reachable from the docker containers..." 1>&2
-      sudo ifconfig lo0 alias $LOCAL_DOCKER_HOST_IP 255.0.0.0
+      sudo ifconfig lo0 delete $LOCAL_DOCKER_HOST_IP 255.0.0.0
     fi
   ;;
 
