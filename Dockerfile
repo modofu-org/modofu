@@ -31,7 +31,7 @@ RUN cd /usr/local/share/modofu/doc-server \
 FROM debian:bullseye
 MAINTAINER YMC IT-Operations <it-operations@ymc.ch>
 
-ARG MODOFU_DOCKER_IMAGE
+ARG MODOFU_DOCKER_IMAGE=modofu/modofu:stable
 ENV MODOFU_DOCKER_IMAGE $MODOFU_DOCKER_IMAGE
 
 # Install additional packages
