@@ -85,7 +85,7 @@ if [ -z "$PROJECT_IP" ]; then
   test_dec_ip=$(ip2dec "$MODOFU_DEV_IP_RANGE_HOST_MIN")
   end_dec_ip=$(ip2dec "$MODOFU_DEV_IP_RANGE_HOST_MAX")
 
-  used_ips=$(cat $hosts_file | grep -F "###AUTOMATICALLY ADDED FOR" | $SED 's/^([^[:space:]]+).*/\1/')
+  used_ips=$(cat $hosts_file | grep -v -E -e "^[[:space:]]*#" | grep -F "###AUTOMATICALLY ADDED FOR" | $SED 's/^([^[:space:]]+).*/\1/')
   while [ $test_dec_ip -le $end_dec_ip ]
   do
     for used_ip in $used_ips
