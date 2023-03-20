@@ -367,7 +367,11 @@ start_devel_env()
     fi
   done
 
-  if [ $1 = true ] ; then
+  if [ "$1" == "bootstrap" ] && [ $2 = true ]  ; then
+    run_bootstrap_scripts
+  fi
+
+  if [ "$1" == "start" ] && [ $2 = true ] ; then
     run_startup_scripts
   fi
 }
@@ -418,6 +422,56 @@ run_startup_scripts()
     docker exec -it -u 0 $container_id /tmp/modofu-run-start-d-in-container
     docker exec -u 0 $container_id rm -f /tmp/modofu-run-start-d-in-container
     echo "I: Finished running '/modofu/start.d/*' in container '$container_name'..." 1>&2
+    echo "" 1>&2
+  done
+}
+
+run_bootstrap_scripts()
+{
+  # Run start.d in each container
+  echo "" 1>&2
+  echo "I: Running '/modofu/bootstrap.d/*' within each container..." 1>&2
+  echo "" 1>&2
+  docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-bootstrap-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-bootstrap-d-in-container.script
+  for container_id in $container_ids
+  do
+    service_name="$(get_docker_compose_service_name_by_container_id $container_id)"
+
+    if [ ! -d "./modofu/containers/$service_name/bootstrap.d" ]; then
+      echo "I: Skipping service '$service_name' for container with id '$container_id', since" 1>&2
+      echo "    './modofu/containers/$service_name/bootstrap.d/'" 1>&2
+      echo "    is not present in the project" 1>&2
+      echo "" 1>&2
+      continue
+    fi
+
+    container_name="$(get_docker_container_name_by_container_id $container_id)"
+
+    echo "I: Processing container '$container_name' with id '$container_id'" 1>&2
+    # Test if we have sh in the container
+    docker exec -i -u 0 $container_id /usr/bin/env sh -c "exit 0" && sh_present_in_container=1 || sh_present_in_container=0
+    if [ $sh_present_in_container -ne 1 ]; then
+      echo "I: No 'sh' is present in container '$container_name'." 1>&2
+      echo "   Will not try to run '/modofu/bootstrap.d/*' within this container." 1>&2
+      continue
+    fi
+
+    echo "I: Running '/modofu/bootstrap.d/*' in container '$container_name'..." 1>&2
+    if [ -d "./modofu/containers/$service_name/bootstrap.d" ]; then
+      echo "I: Copying contents in './modofu/containers/$service_name/bootstrap.d'" 1>&2
+      echo "   to '$container_name:/modofu/bootstrap.d/'" 1>&2
+      docker exec $container_id mkdir /modofu 2>/dev/null || true
+      docker cp ./modofu/containers/$service_name/bootstrap.d $container_id:/modofu/
+    else
+      echo "I: Directory './modofu/containers/$service_name/bootstrap.d' does not exists," 1>&2
+      echo "   NOT copying anything to '$container_name:/modofu/bootstrap.d/'" 1>&2
+    fi
+
+    docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-bootstrap-d-in-container.script $container_id:/tmp/modofu-run-bootstrab-d-in-container
+    docker exec -u 0 $container_id chmod 0777 /tmp/modofu-run-bootstrab-d-in-container
+    docker exec -it -u 0 $container_id /tmp/modofu-run-bootstrab-d-in-container
+    docker exec -u 0 $container_id rm -f /tmp/modofu-run-bootstrab-d-in-container
+    echo "I: Finished running '/modofu/bootstrap.d/*' in container '$container_name'..." 1>&2
     echo "" 1>&2
   done
 }
@@ -617,7 +671,41 @@ case "$1" in
           shift
         done
 
-        start_devel_env $load_scripts
+        start_devel_env "start" $load_scripts
+        devel_env_info
+      ;;
+
+      bootstrap)
+        int_dev_bootstrap_help()
+        {
+          echo "Usage: # modofu dev bootstrap [options]" 1>&2
+          echo ""
+          echo "Options:" 1>&2
+          echo "    --no-scripts  Do not run scripts in bootstrap.d" 1>&2
+        }
+        load_scripts=true
+        shift 2
+        while :;
+        do
+          case $1 in
+
+            --help|-h)
+              int_dev_bootstrap_help
+              exit 0
+            ;;
+
+            --no-scripts)
+              load_scripts=false
+            ;;
+
+            *)
+              break;
+            ;;
+          esac
+          shift
+        done
+
+        start_devel_env "bootstrap" $load_scripts
         devel_env_info
       ;;
 
@@ -870,6 +958,7 @@ case "$1" in
         echo "    pull" 1>&2
         echo "    build" 1>&2
         echo "    start" 1>&2
+        echo "    bootstrap" 1>&2
         echo "    restart" 1>&2
         echo "    exec" 1>&2
         echo "    stop" 1>&2

@@ -1,0 +1,52 @@
+#!/usr/bin/env sh
+
+#########################
+# (c) MODOFU DEVELOPERS #
+###########################################################################
+# This program is free software; you can redistribute it and/or modify it #
+# under the terms of the GNU General Public License as published by the   #
+# Free Software Foundation; either version 2 of the License, or (at your  #
+# option) any later version.                                              #
+# A copy of the GNU General Public License version 2 is in file GPL-2.    #
+###########################################################################
+
+modofu_run_bootstrap_d_in_container()
+{
+  local MODOFU_EXEC_DIR="/modofu/bootstrap.d"
+  local MODOFU_EXEC=""
+  local MODOFU_EXEC_EXIT_CODE=0
+  echo -n "I: Checking if '$MODOFU_EXEC_DIR' is in the container..." 1>&2
+  if [ -d "$MODOFU_EXEC_DIR" ]; then
+    echo "Yes, checking for executables to run..." 1>&2
+    for MODOFU_EXEC in ${MODOFU_EXEC_DIR}/*; do
+      if [ ! -e "${MODOFU_EXEC}" ]; then
+        echo "W: Nothing to execute in '$MODOFU_EXEC_DIR' found." 1>&2
+        break
+      elif [ ! -f "${MODOFU_EXEC}" ]; then
+        echo "E: '${MODOFU_EXEC}' is not file." 1>&2
+        exit 1
+      elif [ ! -x "${MODOFU_EXEC}" ]; then
+        echo "E: '${MODOFU_EXEC}' is not executable." 1>&2
+        exit 1
+      elif [ -f "${MODOFU_EXEC}" ] && \
+           [ -x "${MODOFU_EXEC}" ]; then
+        echo "I: Running '${MODOFU_EXEC}', below you will see the output..." 1>&2
+        echo "-------------------------------------------------------------" 1>&2
+        ${MODOFU_EXEC} || MODOFU_EXEC_EXIT_CODE=$?
+        if [ $MODOFU_EXEC_EXIT_CODE -ne 0 ]; then
+          echo "E: '$MODOFU_EXEC' terminated with non-zero exit code '$MODOFU_EXEC_EXIT_CODE'" 1>&2
+          exit $MODOFU_EXEC_EXIT_CODE
+        fi
+        echo "-------------------------------------------------------------" 1>&2
+        echo "I: Finished running '${MODOFU_EXEC}'." 1>&2
+      else
+        echo "E: Failed dealing with '${MODOFU_EXEC}' due to an unexpected problem." 1>&2
+        exit 1
+      fi
+   done
+ else
+   echo "No, so there is nothing to run" 1>&2
+ fi
+}
+
+modofu_run_bootstrap_d_in_container
