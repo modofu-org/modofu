@@ -625,12 +625,8 @@ case "$1" in
       bootstrap)
         int_dev_bootstrap_help()
         {
-          echo "Usage: # modofu dev bootstrap [options]" 1>&2
-          echo ""
-          echo "Options:" 1>&2
-          echo "    --no-scripts  Do not run scripts in bootstrap.d" 1>&2
+          echo "Usage: # modofu dev bootstrap" 1>&2
         }
-        load_scripts=true
         shift 2
         while :;
         do
@@ -641,10 +637,6 @@ case "$1" in
               exit 0
             ;;
 
-            --no-scripts)
-              load_scripts=false
-            ;;
-
             *)
               break;
             ;;
@@ -652,7 +644,7 @@ case "$1" in
           shift
         done
 
-        start_devel_env "bootstrap" $load_scripts
+        start_devel_env "bootstrap" "true"
         devel_env_info
       ;;
 
