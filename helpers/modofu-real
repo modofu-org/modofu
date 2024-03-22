@@ -588,6 +588,32 @@ case "$1" in
         build_devel_env $force_rm_option $no_cache_option $pull_option $parallel_option "$@"
       ;;
 
+      bootstrap)
+        int_dev_bootstrap_help()
+        {
+          echo "Usage: # modofu dev bootstrap" 1>&2
+        }
+        shift 2
+        while :;
+        do
+          case $1 in
+
+            --help|-h)
+              int_dev_bootstrap_help
+              exit 0
+            ;;
+
+            *)
+              break;
+            ;;
+          esac
+          shift
+        done
+
+        start_devel_env "bootstrap" "true"
+        devel_env_info
+      ;;
+
       start)
         int_dev_start_help()
         {
@@ -619,32 +645,6 @@ case "$1" in
         done
 
         start_devel_env "start" $load_scripts
-        devel_env_info
-      ;;
-
-      bootstrap)
-        int_dev_bootstrap_help()
-        {
-          echo "Usage: # modofu dev bootstrap" 1>&2
-        }
-        shift 2
-        while :;
-        do
-          case $1 in
-
-            --help|-h)
-              int_dev_bootstrap_help
-              exit 0
-            ;;
-
-            *)
-              break;
-            ;;
-          esac
-          shift
-        done
-
-        start_devel_env "bootstrap" "true"
         devel_env_info
       ;;
 
@@ -896,8 +896,8 @@ case "$1" in
         echo "    ps" 1>&2
         echo "    pull" 1>&2
         echo "    build" 1>&2
-        echo "    start" 1>&2
         echo "    bootstrap" 1>&2
+        echo "    start" 1>&2
         echo "    restart" 1>&2
         echo "    exec" 1>&2
         echo "    stop" 1>&2
