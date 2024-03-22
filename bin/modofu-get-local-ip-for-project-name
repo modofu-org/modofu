@@ -78,7 +78,7 @@ dec2ip()
 
 
 # Try to get an existing IP from $hosts_file
-PROJECT_IP=$(grep -E -e "^127(\.[0-9]{1,3}){3}[[:space:]].+[[:space:]]###AUTOMATICALLY ADDED FOR ${COMPOSE_PROJECT_NAME}\$" $hosts_file | $SED 's/^([^[:space:]]+).*/\1/' | head -1)
+PROJECT_IP=$(grep -E -e "^[0-9]{1,3}(\.[0-9]{1,3}){3}[[:space:]].+[[:space:]]###AUTOMATICALLY ADDED FOR ${COMPOSE_PROJECT_NAME}\$" $hosts_file | $SED 's/^([^[:space:]]+).*/\1/' | head -1)
 
 # If $PROJECT_IP is empty, get the next available IP between (including) $MODOFU_DEV_IP_RANGE_HOST_MIN and $MODOFU_DEV_IP_RANGE_HOST_MAX
 if [ -z "$PROJECT_IP" ]; then
