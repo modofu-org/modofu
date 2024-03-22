@@ -382,7 +382,7 @@ run_startup_scripts()
   echo "" 1>&2
   echo "I: Running '/modofu/start.d/*' within each container..." 1>&2
   echo "" 1>&2
-  docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-start-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script
+  docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-script-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-script-d-in-container.script
   for container_id in $container_ids
   do
     service_name="$(get_docker_compose_service_name_by_container_id $container_id)"
@@ -417,10 +417,10 @@ run_startup_scripts()
       echo "   NOT copying anything to '$container_name:/modofu/start.d/'" 1>&2
     fi
 
-    docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-start-d-in-container.script $container_id:/tmp/modofu-run-start-d-in-container
-    docker exec -u 0 $container_id chmod 0777 /tmp/modofu-run-start-d-in-container
-    docker exec -it -u 0 $container_id /tmp/modofu-run-start-d-in-container
-    docker exec -u 0 $container_id rm -f /tmp/modofu-run-start-d-in-container
+    docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-script-d-in-container.script $container_id:/tmp/modofu-run-script-d-in-container
+    docker exec -u 0 $container_id chmod 0777 /tmp/modofu-run-script-d-in-container
+    docker exec -it -u 0 $container_id /tmp/modofu-run-script-d-in-container start
+    docker exec -u 0 $container_id rm -f /tmp/modofu-run-script-d-in-container
     echo "I: Finished running '/modofu/start.d/*' in container '$container_name'..." 1>&2
     echo "" 1>&2
   done
@@ -432,7 +432,7 @@ run_bootstrap_scripts()
   echo "" 1>&2
   echo "I: Running '/modofu/bootstrap.d/*' within each container..." 1>&2
   echo "" 1>&2
-  docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-bootstrap-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-bootstrap-d-in-container.script
+  docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-script-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-script-d-in-container.script
   for container_id in $container_ids
   do
     service_name="$(get_docker_compose_service_name_by_container_id $container_id)"
@@ -467,10 +467,10 @@ run_bootstrap_scripts()
       echo "   NOT copying anything to '$container_name:/modofu/bootstrap.d/'" 1>&2
     fi
 
-    docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-bootstrap-d-in-container.script $container_id:/tmp/modofu-run-bootstrab-d-in-container
-    docker exec -u 0 $container_id chmod 0777 /tmp/modofu-run-bootstrab-d-in-container
-    docker exec -it -u 0 $container_id /tmp/modofu-run-bootstrab-d-in-container
-    docker exec -u 0 $container_id rm -f /tmp/modofu-run-bootstrab-d-in-container
+    docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-script-d-in-container.script $container_id:/tmp/modofu-run-script-d-in-container
+    docker exec -u 0 $container_id chmod 0777 /tmp/modofu-run-script-d-in-container
+    docker exec -it -u 0 $container_id /tmp/modofu-run-script-d-in-container bootstrap
+    docker exec -u 0 $container_id rm -f /tmp/modofu-run-script-d-in-container
     echo "I: Finished running '/modofu/bootstrap.d/*' in container '$container_name'..." 1>&2
     echo "" 1>&2
   done
