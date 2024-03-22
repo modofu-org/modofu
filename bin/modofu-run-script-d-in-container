@@ -10,9 +10,9 @@
 # A copy of the GNU General Public License version 2 is in file GPL-2.    #
 ###########################################################################
 
-modofu_run_start_d_in_container()
+modofu_run_SCRIPT_d_in_container()
 {
-  local MODOFU_EXEC_DIR="/modofu/start.d"
+  local MODOFU_EXEC_DIR="/modofu/$1.d"
   local MODOFU_EXEC=""
   local MODOFU_EXEC_EXIT_CODE=0
   echo -n "I: Checking if '$MODOFU_EXEC_DIR' is in the container..." 1>&2
@@ -49,4 +49,4 @@ modofu_run_start_d_in_container()
  fi
 }
 
-modofu_run_start_d_in_container
+modofu_run_SCRIPT_d_in_container "$1"
