@@ -704,7 +704,7 @@ case "$1" in
           shift
         done
 
-        start_devel_env $run_start_scripts $run_setup_scripts
+        start_devel_env $run_setup_scripts $run_start_scripts
         
         devel_env_info
       ;;
