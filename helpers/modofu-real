@@ -380,13 +380,26 @@ run_in_container_d_scripts()
   echo "I: Running '/modofu/$WHAT_TO_RUN/*' within each container..." 1>&2
   echo "" 1>&2
   docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-script-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-script-d-in-container.script
+
+  local script_subdir_to_use="services"
+  if [ -d "./modofu/containers" ]; then
+    script_subdir_to_use="containers"
+    local tmp_deprecation_timestamp=1711359745
+    local tmp_days_deprecated=$(( ($(date +%s) - $tmp_deprecation_timestamp) / 86400 ))
+    echo -e "\e[1;31mW: Per container-scripts have been deprecated in favor of per service-scripts. \e[0;30;41mPlease rename './modofu/containers' to './modofu/services' as soon as possible.\e[0m" 1>&2
+    echo -e "\e[0;31m   This deprecation happened on $(date -d @$tmp_deprecation_timestamp), which was \e[5;31m${tmp_days_deprecated}\e[0;31m days ago\e[0m" 1>&2
+    echo -e "   \e[0;30;41mI will now sleep for \e[5;30;41m${tmp_days_deprecated}\e[0;30;41m seconds, you might want to use this time to rename './modofu/containers' to './modofu/services'...\e[0m" 1>&2
+    sleep $tmp_days_deprecated
+    unset tmp_deprecation_timestamp
+    unset tmp_days_deprecated
+  fi
+
   for container_id in $container_ids
   do
     service_name="$(get_docker_compose_service_name_by_container_id $container_id)"
-
-    if [ ! -d "./modofu/containers/$service_name/$WHAT_TO_RUN" ]; then
+    if [ ! -d "./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN" ]; then
       echo "I: Skipping service '$service_name' for container with id '$container_id', since" 1>&2
-      echo "    './modofu/containers/$service_name/$WHAT_TO_RUN/'" 1>&2
+      echo "    './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN/'" 1>&2
       echo "    is not present in the project" 1>&2
       echo "" 1>&2
       continue
@@ -404,13 +417,13 @@ run_in_container_d_scripts()
     fi
 
     echo "I: Running '/modofu/$WHAT_TO_RUN/*' in container '$container_name'..." 1>&2
-    if [ -d "./modofu/containers/$service_name/$WHAT_TO_RUN" ]; then
-      echo "I: Copying contents in './modofu/containers/$service_name/$WHAT_TO_RUN'" 1>&2
+    if [ -d "./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN" ]; then
+      echo "I: Copying contents in './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN'" 1>&2
       echo "   to '$container_name:/modofu/$WHAT_TO_RUN/'" 1>&2
       docker exec $container_id mkdir /modofu 2>/dev/null || true
-      docker cp ./modofu/containers/$service_name/$WHAT_TO_RUN $container_id:/modofu/
+      docker cp ./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN $container_id:/modofu/
     else
-      echo "I: Directory './modofu/containers/$service_name/$WHAT_TO_RUN' does not exists," 1>&2
+      echo "I: Directory './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN' does not exists," 1>&2
       echo "   NOT copying anything to '$container_name:/modofu/$WHAT_TO_RUN/'" 1>&2
     fi
 
