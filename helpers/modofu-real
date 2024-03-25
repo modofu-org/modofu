@@ -51,9 +51,16 @@ if ! [ -x "$(which docker)" ]; then
   exit 1
 fi
 
-if ! [ -x "$(which docker-compose)" ]; then
-  echo "E: docker-compose not found. Please install it manually!" 1>&2
-  exit 1
+if docker compose version 1>/dev/null 2>/dev/null; then
+  HAS_COMPOSE_V2_SUPPORT="yes"
+  DOCKER_COMPOSER_CMD="docker compose"
+else
+  HAS_COMPOSE_V2_SUPPORT="no"
+  DOCKER_COMPOSER_CMD="docker-compose"
+  if ! [ -x "$(which $DOCKER_COMPOSER_CMD)" ]; then
+    echo "E: $DOCKER_COMPOSER_CMD not found. Please install it manually or consider installing a newer version of docker with compose )v2= already built in!" 1>&2
+    exit 1
+  fi
 fi
 
 if ! [ -x "$(which nc)" ]; then
@@ -211,14 +218,14 @@ provide_domain_informations()
 
 provide_ports_informations()
 {
-  ports_used_by_project=$(PROJECT_DEV_IP=$GENERIC_LOCAL_TEST_IP docker-compose config | docker run --rm -i modofu/modofu:stable modofu-get-ports-from-docker-compose-config)
+  ports_used_by_project=$(PROJECT_DEV_IP=$GENERIC_LOCAL_TEST_IP $DOCKER_COMPOSER_CMD config | docker run --rm -i modofu/modofu:stable modofu-get-ports-from-docker-compose-config)
 }
 
 open_service_url() {
   provide_basic_informations
   provide_domain_informations
 
-  local docker_compose_config_json=$(docker-compose config --format json)
+  local docker_compose_config_json=$($DOCKER_COMPOSER_CMD config --format json)
 
   if [ "$#" -eq 0 ]; then
     echo "Usage: $MODOFU_SCRIPT_NAME dev url [SERVICE...]"
@@ -392,16 +399,16 @@ start_devel_env()
     fi
   done
 
-  docker-compose up --no-build -d
+  $DOCKER_COMPOSER_CMD up --no-build -d
 
   echo "I: App is now starting, this could take a moment. Use command" 1>&2
   echo "     # export COMPOSE_PATH_SEPARATOR='$COMPOSE_PATH_SEPARATOR'" 1>&2
   echo "     # export COMPOSE_FILE='$COMPOSE_FILE'" 1>&2
-  echo "     # docker-compose logs -f" 1>&2
+  echo "     # $DOCKER_COMPOSER_CMD logs -f" 1>&2
   echo "   to view the progress." 1>&2
 
   # Get running containers
-  container_ids=$(docker-compose ps -q)
+  container_ids=$($DOCKER_COMPOSER_CMD ps -q)
 
   # Process each each container
   for container_id in $container_ids
@@ -537,7 +544,7 @@ pull_devel_env()
   echo "I: Pulling fresh images for development environment..." 1>&2
   provide_basic_informations
 
-  docker-compose pull --ignore-pull-failures "$@"
+  $DOCKER_COMPOSER_CMD pull --ignore-pull-failures "$@"
 }
 
 
@@ -546,7 +553,7 @@ build_devel_env()
   echo "I: (Re-)Building development environment..." 1>&2
   provide_basic_informations
 
-  docker-compose build "$@"
+  $DOCKER_COMPOSER_CMD build "$@"
 }
 
 stop_devel_env()
@@ -559,7 +566,7 @@ stop_devel_env()
     docker-sync stop --dir=/tmp/modofu/docker-sync --name=docker-sync-managed-by-modofu-for-$COMPOSE_PROJECT_NAME || true
   fi
 
-  docker-compose stop
+  $DOCKER_COMPOSER_CMD stop
 }
 
 clean_devel_sync()
@@ -593,7 +600,7 @@ case "$1" in
 
       ps)
         provide_basic_informations
-        docker-compose ps
+        $DOCKER_COMPOSER_CMD ps
       ;;
 
       url)
@@ -808,7 +815,7 @@ case "$1" in
         provide_basic_informations
 
         echo "I: Checking for running services/containers..." 1>&2
-        container_ids=$(docker-compose ps -q)
+        container_ids=$($DOCKER_COMPOSER_CMD ps -q)
 
         for container_id in $container_ids
         do
@@ -845,7 +852,7 @@ case "$1" in
           exit 1
         fi
 
-        docker-compose restart $timeout_option $services_to_restart
+        $DOCKER_COMPOSER_CMD restart $timeout_option $services_to_restart
       ;;
 
       exec)
@@ -909,7 +916,7 @@ case "$1" in
 
         provide_basic_informations
         container_name="$1"
-        docker-compose exec $run_as_user_option $tty_option $container_to_use "$@"
+        $DOCKER_COMPOSER_CMD exec $run_as_user_option $tty_option $container_to_use "$@"
       ;;
 
       stop)
@@ -981,12 +988,12 @@ case "$1" in
 
         if [ -n "$services_requested" ]; then
           echo "I: Removing containers for services: $services_requested" 1>&2
-          docker-compose rm --stop --force $remove_volumes_option $services_requested
+          $DOCKER_COMPOSER_CMD rm --stop --force $remove_volumes_option $services_requested
         else
           stop_devel_env
           echo "I: Removing development environment..." 1>&2
           provide_domain_informations
-          docker-compose down $remove_volumes_option $remove_orphans_option
+          $DOCKER_COMPOSER_CMD down $remove_volumes_option $remove_orphans_option
           int_add_entries_to_etc_hosts $COMPOSE_PROJECT_NAME do_clean
           if [ "$OS" = "osx" ]; then
             # Remove IP alias for the project
@@ -1067,7 +1074,7 @@ case "$1" in
           exit 1
         fi
 
-        docker-compose logs $follow_option $timestamp_option $since_option $tail_option  "$@"
+        $DOCKER_COMPOSER_CMD logs $follow_option $timestamp_option $since_option $tail_option  "$@"
       ;;
 
       ''|help|--help)
