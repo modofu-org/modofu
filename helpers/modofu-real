@@ -375,9 +375,10 @@ start_devel_env()
 run_in_container_d_scripts()
 {
   # Run XYZ.d-scripts in each container
-  local WHAT_TO_RUN="$1.d"
+  local WHAT_TO_RUN_NAME="$1"
+  local WHAT_TO_RUN_D="$WHAT_TO_RUN_NAME.d"
   echo "" 1>&2
-  echo "I: Running '/modofu/$WHAT_TO_RUN/*' within each container..." 1>&2
+  echo "I: Running '/modofu/$WHAT_TO_RUN_D/*' within each container..." 1>&2
   echo "" 1>&2
   docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-script-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-script-d-in-container.script
 
@@ -402,9 +403,9 @@ run_in_container_d_scripts()
   for container_id in $container_ids
   do
     service_name="$(get_docker_compose_service_name_by_container_id $container_id)"
-    if [ ! -d "./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN" ]; then
+    if [ ! -d "./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN_D" ]; then
       echo "I: Skipping service '$service_name' for container with id '$container_id', since" 1>&2
-      echo "    './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN/'" 1>&2
+      echo "    './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN_D/'" 1>&2
       echo "    is not present in the project" 1>&2
       echo "" 1>&2
       continue
@@ -417,26 +418,26 @@ run_in_container_d_scripts()
     docker exec -i -u 0 $container_id /usr/bin/env sh -c "exit 0" && sh_present_in_container=1 || sh_present_in_container=0
     if [ $sh_present_in_container -ne 1 ]; then
       echo "I: No 'sh' is present in container '$container_name'." 1>&2
-      echo "   Will not try to run '/modofu/$WHAT_TO_RUN/*' within this container." 1>&2
+      echo "   Will not try to run '/modofu/$WHAT_TO_RUN_D/*' within this container." 1>&2
       continue
     fi
 
-    echo "I: Running '/modofu/$WHAT_TO_RUN/*' in container '$container_name'..." 1>&2
-    if [ -d "./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN" ]; then
-      echo "I: Copying contents in './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN'" 1>&2
-      echo "   to '$container_name:/modofu/$WHAT_TO_RUN/'" 1>&2
+    echo "I: Running '/modofu/$WHAT_TO_RUN_D/*' in container '$container_name'..." 1>&2
+    if [ -d "./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN_D" ]; then
+      echo "I: Copying contents in './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN_D'" 1>&2
+      echo "   to '$container_name:/modofu/$WHAT_TO_RUN_D/'" 1>&2
       docker exec $container_id mkdir /modofu 2>/dev/null || true
-      docker cp ./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN $container_id:/modofu/
+      docker cp ./modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN_D $container_id:/modofu/
     else
-      echo "I: Directory './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN' does not exists," 1>&2
-      echo "   NOT copying anything to '$container_name:/modofu/$WHAT_TO_RUN/'" 1>&2
+      echo "I: Directory './modofu/$script_subdir_to_use/$service_name/$WHAT_TO_RUN_D' does not exists," 1>&2
+      echo "   NOT copying anything to '$container_name:/modofu/$WHAT_TO_RUN_D/'" 1>&2
     fi
 
     docker cp /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-script-d-in-container.script $container_id:/tmp/modofu-run-script-d-in-container
     docker exec -u 0 $container_id chmod 0777 /tmp/modofu-run-script-d-in-container
-    docker exec -it -u 0 $container_id /tmp/modofu-run-script-d-in-container start
+    docker exec -it -u 0 $container_id /tmp/modofu-run-script-d-in-container $WHAT_TO_RUN_NAME
     docker exec -u 0 $container_id rm -f /tmp/modofu-run-script-d-in-container
-    echo "I: Finished running '/modofu/$WHAT_TO_RUN/*' in container '$container_name'..." 1>&2
+    echo "I: Finished running '/modofu/$WHAT_TO_RUN_D/*' in container '$container_name'..." 1>&2
     echo "" 1>&2
   done
 }
