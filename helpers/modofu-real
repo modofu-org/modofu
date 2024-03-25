@@ -222,6 +222,10 @@ provide_ports_informations()
 }
 
 open_service_url() {
+  if [ "$HAS_COMPOSE_V2_SUPPORT" != "yes" ]; then
+    echo "E: $MODOFU_SCRIPT_NAME dev url requires at least docker compose v2" 1>&2
+    exit 1
+  fi
   provide_basic_informations
   provide_domain_informations
 
@@ -1036,6 +1040,10 @@ case "$1" in
             ;;
 
             --since)
+              if [ "$HAS_COMPOSE_V2_SUPPORT" != "yes" ]; then
+                echo "E: Option '--since' for '$MODOFU_SCRIPT_NAME dev logs' requires at least docker compose v2" 1>&2
+                exit 1
+              fi
               since_option="--since $2"
               shift
             ;;
