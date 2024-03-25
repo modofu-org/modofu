@@ -223,7 +223,7 @@ start_devel_env()
 {
   local run_setup_scripts="$1"
   local run_start_scripts="$2"
-  
+
   echo "I: Starting development environment..." 1>&2
 
   # Check if the modofu-cache volume is present
@@ -629,7 +629,7 @@ case "$1" in
           echo "This command sets up the development environment, ensuring all required services and settings are initialized. It's typically run once before starting the development environment for the first time, but can be used to reinitialize settings or services as needed." 1>&2
           echo ""
           echo "Options:" 1>&2
-          echo "    --no-start.d-scripts  Skip execution of scripts in start.d during setup." 1>&2
+          echo "    --no-start-scripts  Skip execution of scripts in start.d during setup." 1>&2
           echo ""
           echo "Note: You can also use '$MODOFU_SCRIPT_NAME dev start --run-setup-scripts' instead." 1>&2
 
@@ -646,9 +646,9 @@ case "$1" in
               exit 0
             ;;
 
-            --no-start.d-scripts)
+            --no-start.d-scripts|--no-start-scripts)
               run_start_scripts=false
-              echo "I: Not running start.d scripts, because '--no-start.d-scripts' was given" 1>&2
+              echo "I: Not running start.d scripts, because '--no-start-scripts' was given" 1>&2
             ;;
 
             *)
@@ -659,7 +659,7 @@ case "$1" in
         done
 
         start_devel_env $run_setup_scripts $run_start_scripts
-    
+
         devel_env_info
       ;;
 
@@ -705,7 +705,7 @@ case "$1" in
         done
 
         start_devel_env $run_setup_scripts $run_start_scripts
-        
+
         devel_env_info
       ;;
 
