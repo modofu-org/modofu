@@ -382,6 +382,12 @@ run_in_container_d_scripts()
   echo "" 1>&2
   docker run --rm $MODOFU_DOCKER_IMAGE /bin/bash -c 'cat $(which modofu-run-script-d-in-container)' > /tmp/modofu-$MODOFU_LOCAL_DOCKER_SETUP_REAL_VERSION-run-script-d-in-container.script
 
+  if [ -d "./modofu/containers" ] && \
+     [ -d "./modofu/services" ]; then
+    echo "E: Please either use './modofu/services' or './modofu/containers'. The later is deprecated and should no longer be used." 1>&2
+    exit 1
+  fi
+
   local script_subdir_to_use="services"
   if [ -d "./modofu/containers" ]; then
     script_subdir_to_use="containers"
