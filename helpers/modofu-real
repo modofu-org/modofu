@@ -624,14 +624,14 @@ case "$1" in
       setup)
         int_dev_setup_help()
         {
-          echo "Usage: # modofu dev setup [options]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev setup [options]" 1>&2
           echo ""
           echo "This command sets up the development environment, ensuring all required services and settings are initialized. It's typically run once before starting the development environment for the first time, but can be used to reinitialize settings or services as needed." 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    --no-start.d-scripts  Skip execution of scripts in start.d during setup." 1>&2
           echo ""
-          echo "Note: You can also use 'modofu dev start --run-setup-scripts' instead." 1>&2
+          echo "Note: You can also use '$MODOFU_SCRIPT_NAME dev start --run-setup-scripts' instead." 1>&2
 
         }
         run_setup_scripts=true
@@ -666,7 +666,7 @@ case "$1" in
       start)
         int_dev_start_help()
         {
-          echo "Usage: # modofu dev start [options]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev start [options]" 1>&2
           echo ""
           echo "This command starts the development environment." 1>&2
           echo "By default, it also runs scripts located in 'start.d' unless specified otherwise." 1>&2
