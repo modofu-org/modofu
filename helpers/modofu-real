@@ -221,6 +221,9 @@ modofu_cmd_ipcalc()
 
 start_devel_env()
 {
+  local run_setup_scripts="$1"
+  local run_start_scripts="$2"
+  
   echo "I: Starting development environment..." 1>&2
 
   # Check if the modofu-cache volume is present
@@ -367,9 +370,14 @@ start_devel_env()
     fi
   done
 
-  if [ "$1" == "start"  -o "$1" == "setup" ] && [ "$2" == "true" ]  ; then
-    run_in_container_d_scripts $1
+  if [ "$run_setup_scripts" == "true" ]; then
+    run_in_container_d_scripts "setup"
   fi
+
+  if [ "$run_start_scripts" == "true" ]; then
+    run_in_container_d_scripts "start"
+  fi
+
 }
 
 run_in_container_d_scripts()
@@ -618,10 +626,16 @@ case "$1" in
         {
           echo "Usage: # modofu dev setup [options]" 1>&2
           echo ""
+          echo "This command sets up the development environment, ensuring all required services and settings are initialized. It's typically run once before starting the development environment for the first time, but can be used to reinitialize settings or services as needed." 1>&2
+          echo ""
           echo "Options:" 1>&2
-          echo "    --no-start.d-scripts  Do not also run scripts in start.d" 1>&2
+          echo "    --no-start.d-scripts  Skip execution of scripts in start.d during setup." 1>&2
+          echo ""
+          echo "Note: You can also use 'modofu dev start --run-setup-scripts' instead." 1>&2
+
         }
-        run_startd_scripts=true
+        run_setup_scripts=true
+        run_start_scripts=true
         shift 2
         while :;
         do
@@ -633,7 +647,8 @@ case "$1" in
             ;;
 
             --no-start.d-scripts)
-              run_startd_scripts=false
+              run_start_scripts=false
+              echo "I: Not running start.d scripts, because '--no-start.d-scripts' was given" 1>&2
             ;;
 
             *)
@@ -643,12 +658,8 @@ case "$1" in
           shift
         done
 
-        start_devel_env "setup" "true"
-        if [ "$run_startd_scripts" == "true" ]; then
-          run_in_container_d_scripts start
-        else
-          echo "I: Not running start.d scripts, as '--no-start.d-scripts' was given" 1>&2
-        fi
+        start_devel_env $run_setup_scripts $run_start_scripts
+    
         devel_env_info
       ;;
 
@@ -657,10 +668,15 @@ case "$1" in
         {
           echo "Usage: # modofu dev start [options]" 1>&2
           echo ""
+          echo "This command starts the development environment." 1>&2
+          echo "By default, it also runs scripts located in 'start.d' unless specified otherwise." 1>&2
+          echo ""
           echo "Options:" 1>&2
-          echo "    --no-scripts  Do not run scripts in start.d" 1>&2
+          echo "    --run-setup-scripts  Also execute setup scripts in 'setup.d'." 1>&2
+          echo "    --no-start-scripts   Do not run scripts in 'start.d'." 1>&2
         }
-        load_scripts=true
+        run_setup_scripts=false
+        run_start_scripts=true
         shift 2
         while :;
         do
@@ -671,8 +687,14 @@ case "$1" in
               exit 0
             ;;
 
-            --no-scripts)
-              load_scripts=false
+            --run-setup-scripts)
+              run_setup_scripts=true
+              echo "I: Also running scripts in 'setup.d', because '--run-setup-scripts' was given" 1>&2
+            ;;
+
+            --no-scripts|--no-start-scripts)
+              run_start_scripts=false
+              echo "I: Not running scripts in 'start.d', because '--no-start-scripts' was given" 1>&2
             ;;
 
             *)
@@ -682,7 +704,8 @@ case "$1" in
           shift
         done
 
-        start_devel_env "start" $load_scripts
+        start_devel_env $run_start_scripts $run_setup_scripts
+        
         devel_env_info
       ;;
 
