@@ -1022,7 +1022,7 @@ case "$1" in
           exit 1
         fi
 
-        docker-compose logs "$follow_option" "$timestamp_option" $since_option $tail_option  "$@"
+        docker-compose logs $follow_option $timestamp_option $since_option $tail_option  "$@"
       ;;
 
       ''|help|--help)
