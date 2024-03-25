@@ -367,7 +367,7 @@ start_devel_env()
     fi
   done
 
-  if [ "$1" == "start"  -o "$1" == "bootstrap" ] && [ "$2" == "true" ]  ; then
+  if [ "$1" == "start"  -o "$1" == "setup" ] && [ "$2" == "true" ]  ; then
     run_in_container_d_scripts $1
   fi
 }
@@ -607,10 +607,10 @@ case "$1" in
         build_devel_env $force_rm_option $no_cache_option $pull_option $parallel_option "$@"
       ;;
 
-      bootstrap)
-        int_dev_bootstrap_help()
+      setup)
+        int_dev_setup_help()
         {
-          echo "Usage: # modofu dev bootstrap" 1>&2
+          echo "Usage: # modofu dev setup" 1>&2
         }
         shift 2
         while :;
@@ -618,7 +618,7 @@ case "$1" in
           case $1 in
 
             --help|-h)
-              int_dev_bootstrap_help
+              int_dev_setup_help
               exit 0
             ;;
 
@@ -629,7 +629,7 @@ case "$1" in
           shift
         done
 
-        start_devel_env "bootstrap" "true"
+        start_devel_env "setup" "true"
         devel_env_info
       ;;
 
@@ -915,7 +915,7 @@ case "$1" in
         echo "    ps" 1>&2
         echo "    pull" 1>&2
         echo "    build" 1>&2
-        echo "    bootstrap" 1>&2
+        echo "    setup" 1>&2
         echo "    start" 1>&2
         echo "    restart" 1>&2
         echo "    exec" 1>&2
