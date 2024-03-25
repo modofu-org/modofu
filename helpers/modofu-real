@@ -214,6 +214,47 @@ provide_ports_informations()
   ports_used_by_project=$(PROJECT_DEV_IP=$GENERIC_LOCAL_TEST_IP docker-compose config | docker run --rm -i modofu/modofu:stable modofu-get-ports-from-docker-compose-config)
 }
 
+open_service_url() {
+  provide_basic_informations
+  provide_domain_informations
+
+  local docker_compose_config_json=$(docker-compose config --format json)
+
+  if [ "$#" -eq 0 ]; then
+    echo "Usage: $MODOFU_SCRIPT_NAME dev url [SERVICE...]"
+    echo "Without specifying SERVICE, this command lists all available services and their ports/urls."
+    echo ""
+    echo "Available services:"
+    
+    echo "$docker_compose_config_json" | docker run --rm -i modofu/modofu:stable /bin/bash -c \
+"jq -r '.services | to_entries[] | .key as \$service | .value.ports[]? | \"\(\$service) | \(.published):\(.target) (public:private) | URL: http://$MODOFU_PRIMARY_LOCAL_DOMAIN:\(.published)\"'"
+
+    return 0
+  fi
+
+  local service_name="$1"
+
+  local port_mapping=$(echo "$docker_compose_config_json" | docker run --rm -i modofu/modofu:stable /bin/bash -c \
+  "jq -r --arg service_name \"$service_name\" '.services[\$service_name].ports[]?.published' | head -n 1")
+  
+  if [ -z "$port_mapping" ]; then
+    echo "E: Could not find an exposed port for $service_name." 1>&2
+    return 1
+  fi
+
+  local url="http://$MODOFU_PRIMARY_LOCAL_DOMAIN:$port_mapping"
+  echo "Opening $url in your default browser..."
+
+  if [ "$OS" = "osx" ]; then
+    open "$url"
+  elif [ "$OS" = "linux" ]; then
+    xdg-open "$url"
+  else
+    echo "E: Unsupported operating system '$OS'" 1>&2
+    return 1
+  fi
+}
+
 modofu_cmd_ipcalc()
 {
   docker run --rm $MODOFU_DOCKER_IMAGE ipcalc "$@"
@@ -545,6 +586,10 @@ case "$1" in
       ps)
         provide_basic_informations
         docker-compose ps
+      ;;
+
+      url)
+        open_service_url "${@:3}"
       ;;
 
       pull)
@@ -941,6 +986,7 @@ case "$1" in
         echo "    stop" 1>&2
         echo "    clean-sync" 1>&2
         echo "    remove" 1>&2
+        echo "    url" 1>&2
       ;;
 
       *)
