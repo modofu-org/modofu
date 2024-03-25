@@ -386,9 +386,14 @@ run_in_container_d_scripts()
     script_subdir_to_use="containers"
     local tmp_deprecation_timestamp=1711359745
     local tmp_days_deprecated=$(( ($(date +%s) - $tmp_deprecation_timestamp) / 86400 ))
-    echo -e "\e[1;31mW: Per container-scripts have been deprecated in favor of per service-scripts. \e[0;30;41mPlease rename './modofu/containers' to './modofu/services' as soon as possible.\e[0m" 1>&2
-    echo -e "\e[0;31m   This deprecation happened on $(date -d @$tmp_deprecation_timestamp), which was \e[5;31m${tmp_days_deprecated}\e[0;31m days ago\e[0m" 1>&2
-    echo -e "   \e[0;30;41mI will now sleep for \e[5;30;41m${tmp_days_deprecated}\e[0;30;41m seconds, you might want to use this time to rename './modofu/containers' to './modofu/services'...\e[0m" 1>&2
+    if date -d @0 1>/dev/null 2>/dev/null; then
+      local tmp_deprecation_date=$(date -d @$tmp_deprecation_timestamp)
+    else
+      local tmp_deprecation_date=$(date -jf "%s" $tmp_deprecation_timestamp)
+    fi
+    echo "W: Per container-scripts have been deprecated in favor of per service-scripts. Please rename './modofu/containers' to './modofu/services' as soon as possible." 1>&2
+    echo "   This deprecation happened on $tmp_deprecation_date, which was ${tmp_days_deprecated} days ago" 1>&2
+    echo "   I will now sleep for ${tmp_days_deprecated} seconds, you might want to use this time to rename './modofu/containers' to './modofu/services'..." 1>&2
     sleep $tmp_days_deprecated
     unset tmp_deprecation_timestamp
     unset tmp_days_deprecated
