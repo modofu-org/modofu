@@ -626,13 +626,14 @@ case "$1" in
         {
           echo "Usage: # $MODOFU_SCRIPT_NAME dev setup [options]" 1>&2
           echo ""
-          echo "This command sets up the development environment, ensuring all required services and settings are initialized. It's typically run once before starting the development environment for the first time, but can be used to reinitialize settings or services as needed." 1>&2
-          echo ""
+          echo "This command sets up the development environment, ensuring all required" 1>&2
+          echo "services and settings are initialized. It's typically run once before" 1>&2
+          echo "starting the development environment for the first time, but can be used" 1>&2
+          echo "to reinitialize settings or services as needed." 1>&2
+          echo "Alternatively you can run: # $MODOFU_SCRIPT_NAME dev start --run-setup-scripts" 1>&2
+          echo "" 1>&2
           echo "Options:" 1>&2
           echo "    --no-start-scripts  Skip execution of scripts in start.d during setup." 1>&2
-          echo ""
-          echo "Note: You can also use '$MODOFU_SCRIPT_NAME dev start --run-setup-scripts' instead." 1>&2
-
         }
         run_setup_scripts=true
         run_start_scripts=true
@@ -672,7 +673,7 @@ case "$1" in
           echo "By default, it also runs scripts located in 'start.d' unless specified otherwise." 1>&2
           echo ""
           echo "Options:" 1>&2
-          echo "    --run-setup-scripts  Also execute setup scripts in 'setup.d'." 1>&2
+          echo "    --run-setup-scripts  Also execute setup scripts in 'setup.d' in advance." 1>&2
           echo "    --no-start-scripts   Do not run scripts in 'start.d'." 1>&2
         }
         run_setup_scripts=false
