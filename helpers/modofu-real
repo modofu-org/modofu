@@ -626,6 +626,7 @@ case "$1" in
           echo "    --no-cache       Do not use cache when building the image." 1>&2
           echo "    --no-pull        Do not refresh intermediate images." 1>&2
           echo "    --parallel       Build images in parallel." 1>&2
+          echo "    --progress-plain  Show progress as plain text." 1>&2
         }
         force_rm_option=""
         no_cache_option=""
@@ -655,6 +656,15 @@ case "$1" in
 
             --parallel)
               parallel_option="--parallel"
+            ;;
+
+            --progress-plain)
+              if [ "$HAS_COMPOSE_V2_SUPPORT" != "yes" ]; then
+                echo "E: Using the --progress-plain option requires at least docker compose v2" 1>&2
+                exit 1
+              fi
+
+              export BUILDKIT_PROGRESS=plain
             ;;
 
             --)
