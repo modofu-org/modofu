@@ -530,7 +530,7 @@ devel_env_info()
 
   echo "" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev ps'   to get details about services" 1>&2
-  echo "I: Use '# $MODOFU_SCRIPT_NAME dev logs [SERVICE...]' to see the logs of a service" 1>&2
+  echo "I: Use '# $MODOFU_SCRIPT_NAME dev logs [SERVICES...]' to see the logs of one or more services" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev url' to get a list of services and their urls" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev stop' to stop the app" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev info' to see this this summary again" 1>&2
@@ -619,7 +619,7 @@ case "$1" in
       build)
         int_dev_build_help()
         {
-          echo "Usage: # $MODOFU_SCRIPT_NAME dev build [options] [SERVICE...]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev build [options] [SERVICES...]" 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    --force-rm       Always remove intermediate containers." 1>&2
@@ -769,7 +769,7 @@ case "$1" in
       restart)
         int_dev_restart_help()
         {
-          echo "Usage: # $MODOFU_SCRIPT_NAME dev restart [options] [SERVICE...]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev restart [options] [SERVICES...]" 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    -t, --timeout TIMEOUT     Specify a shutdown timeout in seconds." 1>&2
@@ -936,7 +936,7 @@ case "$1" in
       remove)
         int_dev_remove_help()
         {
-          echo "Usage: # $MODOFU_SCRIPT_NAME dev remove [options] [SERVICE...]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev remove [options] [SERVICES...]" 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    --remove-orphans  Remove containers for services that are" 1>&2
