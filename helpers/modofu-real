@@ -232,7 +232,7 @@ open_service_url() {
   local docker_compose_config_json=$($DOCKER_COMPOSER_CMD config --format json)
 
   if [ "$#" -eq 0 ]; then
-    echo "Usage: $MODOFU_SCRIPT_NAME dev url [SERVICE...]"
+    echo "Usage: # $MODOFU_SCRIPT_NAME dev url [SERVICE...]"
     echo "Without specifying SERVICE, this command lists all available services and their ports/urls."
     echo ""
     echo "Available services:"
@@ -406,9 +406,7 @@ start_devel_env()
   $DOCKER_COMPOSER_CMD up --no-build -d
 
   echo "I: App is now starting, this could take a moment. Use command" 1>&2
-  echo "     # export COMPOSE_PATH_SEPARATOR='$COMPOSE_PATH_SEPARATOR'" 1>&2
-  echo "     # export COMPOSE_FILE='$COMPOSE_FILE'" 1>&2
-  echo "     # $DOCKER_COMPOSER_CMD logs -f" 1>&2
+  echo "     # $MODOFU_SCRIPT_NAME dev logs -f" 1>&2
   echo "   to view the progress." 1>&2
 
   # Get running containers
@@ -532,13 +530,15 @@ devel_env_info()
 
   echo "" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev ps'   to get details about services" 1>&2
+  echo "I: Use '# $MODOFU_SCRIPT_NAME dev logs [SERVICE...]' to see the logs of a service" 1>&2
+  echo "I: Use '# $MODOFU_SCRIPT_NAME dev url' to get a list of services and their urls" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev stop' to stop the app" 1>&2
   echo "I: Use '# $MODOFU_SCRIPT_NAME dev info' to see this this summary again" 1>&2
 
   if [ $NEED_DOCKER_SYNC -eq 1 ]; then
     echo "" 1>&2
     echo "I: If you are interested in the output of docker-sync, use:" 1>&2
-    echo "   # modofu sync log" 1>&2
+    echo "   # $MODOFU_SCRIPT_NAME sync log" 1>&2
   fi
 
 }
@@ -619,7 +619,7 @@ case "$1" in
       build)
         int_dev_build_help()
         {
-          echo "Usage: # modofu dev build [options] [SERVICE...]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev build [options] [SERVICE...]" 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    --force-rm       Always remove intermediate containers." 1>&2
@@ -769,7 +769,7 @@ case "$1" in
       restart)
         int_dev_restart_help()
         {
-          echo "Usage: # modofu dev restart [options] [SERVICE...]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev restart [options] [SERVICE...]" 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    -t, --timeout TIMEOUT     Specify a shutdown timeout in seconds." 1>&2
@@ -862,7 +862,7 @@ case "$1" in
       exec)
         int_dev_exec_help()
         {
-          echo "Usage: # modofu dev exec [options] SERVICE COMMAND [COMMAND ARGS...]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev exec [options] SERVICE COMMAND [COMMAND ARGS...]" 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    -u|--user=USER       Run the command as this user." 1>&2
@@ -928,15 +928,15 @@ case "$1" in
       ;;
 
       clean-sync)
-        echo "E: '# modofu dev clean-sync' has been superseeded by" 1>&2
-        echo "   '# modofu sync clean" 1>&2
+        echo "E: '# $MODOFU_SCRIPT_NAME dev clean-sync' has been superseeded by" 1>&2
+        echo "   '# $MODOFU_SCRIPT_NAME sync clean" 1>&2
         exit 1
       ;;
 
       remove)
         int_dev_remove_help()
         {
-          echo "Usage: # modofu dev remove [options] [SERVICE...]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev remove [options] [SERVICE...]" 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    --remove-orphans  Remove containers for services that are" 1>&2
@@ -1011,9 +1011,10 @@ case "$1" in
       logs)
         int_dev_logs_help()
         {
-          echo "Usage: # $MODOFU_SCRIPT_NAME dev logs [options] [SERVICE...]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME dev logs [options] [SERVICES...]" 1>&2
           echo ""
-          echo "Displays the logs for a specified service within the development environment. Use this command to troubleshoot issues by inspecting the runtime logs of your services."
+          echo "Displays the logs for specified services within the development environment. If no service is specified, logs for all services will be displayed."
+          echo "Use this command to troubleshoot issues by inspecting the runtime logs of your services."
           echo ""
           echo "Options:" 1>&2
           echo "    -f, --follow       Follow log output." 1>&2
@@ -1076,31 +1077,24 @@ case "$1" in
 
         provide_basic_informations
 
-        if [ $# -eq 0 ]; then
-          echo "E: You must specify at least one service to view logs." 1>&2
-          int_dev_logs_help
-          exit 1
-        fi
-
-        $DOCKER_COMPOSER_CMD logs $follow_option $timestamp_option $since_option $tail_option  "$@"
+        $DOCKER_COMPOSER_CMD logs $follow_option $timestamp_option $since_option $tail_option "$@"
       ;;
 
       ''|help|--help)
         echo "Command '$1' supports the following arguments:" 1>&2
-        echo "    info" 1>&2
-        echo "    ps" 1>&2
-        echo "    pull" 1>&2
-        echo "    build" 1>&2
-        echo "    setup" 1>&2
-        echo "    start" 1>&2
-        echo "    restart" 1>&2
-        echo "    exec" 1>&2
-        echo "    stop" 1>&2
-        echo "    clean-sync" 1>&2
-        echo "    remove" 1>&2
-        echo "    logs" 1>&2
-        echo "    url" 1>&2
-      ;;
+        echo "    info          Show development environment information" 1>&2
+        echo "    ps            List containers" 1>&2
+        echo "    pull          Pull service images" 1>&2
+        echo "    build         Build or rebuild services" 1>&2
+        echo "    setup         Setup the development environment" 1>&2
+        echo "    start         Start services" 1>&2
+        echo "    restart       Restart services" 1>&2
+        echo "    exec          Execute a command in a running container" 1>&2
+        echo "    stop          Stop services" 1>&2
+        echo "    remove        Remove stopped containers" 1>&2
+        echo "    logs          View output from services" 1>&2
+        echo "    url           Open service URL in the default browser" 1>&2
+            ;;
 
       *)
         echo "E: Command '$1' does not support argument '$2'" 1>&2
@@ -1141,8 +1135,8 @@ case "$1" in
 
       --help|-h)
         echo "Command '$1' supports the following arguments:" 1>&2
-        echo "    read" 1>&2
-        echo "    edit" 1>&2
+        echo "    read        Open the project documentation in a browser" 1>&2
+        echo "    edit        Edit the project documentation" 1>&2
       ;;
 
       *)
@@ -1157,7 +1151,7 @@ case "$1" in
       log)
         int_sync_log_help()
         {
-          echo "Usage: # modofu sync log [options]" 1>&2
+          echo "Usage: # $MODOFU_SCRIPT_NAME sync log [options]" 1>&2
           echo ""
           echo "Options:" 1>&2
           echo "    -f|--follow    Specify if the logs should be streamed" 1>&2
@@ -1236,10 +1230,10 @@ case "$1" in
 
       ''|--help|-h)
         echo "Command '$1' supports the following arguments:" 1>&2
-        echo "    log" 1>&2
-        echo "    start" 1>&2
-        echo "    stop" 1>&2
-        echo "    clean" 1>&2
+        echo "    log         Show sync logs" 1>&2
+        echo "    start       Start syncing services" 1>&2
+        echo "    stop        Stop syncing services" 1>&2
+        echo "    clean       Clean sync artifacts" 1>&2
       ;;
 
       *)
@@ -1289,15 +1283,15 @@ case "$1" in
   ;;
 
   ''|help|--help)
-    echo "USAGE: $MODOFU_SCRIPT_NAME COMMAND [argument...]" 1>&2
+    echo "Usage: # $MODOFU_SCRIPT_NAME COMMAND [argument...]" 1>&2
     echo "Commands:" 1>&2
-    echo "    help" 1>&2
-    echo "    doc" 1>&2
-    echo "    dev" 1>&2
-    echo "    sync" 1>&2
-    echo "    self-upgrade" 1>&2
-    echo "    license" 1>&2
-  ;;
+    echo "    help            Display help information" 1>&2
+    echo "    dev             Manage Development environment" 1>&2
+    echo "    sync            Manage Docker Sync" 1>&2
+    echo "    self-upgrade    Upgrade the modofu script to the latest version" 1>&2
+    echo "    doc             Open project documentation" 1>&2
+    echo "    license         Display licensing information" 1>&2
+    ;;
 
   *)
     echo "E: $MODOFU_SCRIPT_NAME does not support command '$1'" 1>&2
