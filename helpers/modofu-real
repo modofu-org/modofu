@@ -622,10 +622,10 @@ case "$1" in
           echo "Usage: # $MODOFU_SCRIPT_NAME dev build [options] [SERVICES...]" 1>&2
           echo ""
           echo "Options:" 1>&2
-          echo "    --force-rm       Always remove intermediate containers." 1>&2
-          echo "    --no-cache       Do not use cache when building the image." 1>&2
-          echo "    --no-pull        Do not refresh intermediate images." 1>&2
-          echo "    --parallel       Build images in parallel." 1>&2
+          echo "    --force-rm        Always remove intermediate containers." 1>&2
+          echo "    --no-cache        Do not use cache when building the image." 1>&2
+          echo "    --no-pull         Do not refresh intermediate images." 1>&2
+          echo "    --parallel        Build images in parallel." 1>&2
           echo "    --progress-plain  Show progress as plain text." 1>&2
         }
         force_rm_option=""
